@@ -4,6 +4,6 @@
 # Date: 2026-02-16T17:27:52.654Z
 
 user_name: Jack
-communication_language: English
+communication_language: 繁體中文
 document_output_language: English
 output_folder: "{project-root}/_bmad-output"
