@@ -74,11 +74,11 @@ so that I can access the graph visualization in my browser without running a sep
   - [x] Use `tokio::select!` or `tokio::spawn` for concurrent servers
   - [x] Log HTTP server address on startup: `info!("Web UI available at http://{host}:{port}")`
   - [x] Graceful shutdown: both servers shut down together
-- [ ] Initialize Svelte frontend project (AC: 3)
+- [x] Initialize Svelte frontend project (AC: 3)
   - [x] Create `web-ui/` directory at project root
-  - [ ] Initialize SvelteKit + Vite 6.x project
-  - [ ] Add `@xyflow/svelte` dependency (placeholder, used in Story 11.2)
-  - [ ] Configure Vite build output to `web-ui/dist/`
+  - [x] Initialize SvelteKit + Vite 6.x project
+  - [x] Add `@xyflow/svelte` dependency (placeholder, used in Story 11.2)
+  - [x] Configure Vite build output to `web-ui/dist/`
   - [x] Add minimal placeholder `index.html` serving a "Lattice Web UI" heading
 - [x] Add tests (AC: 1-7)
   - [x] Unit test: config parsing with web section

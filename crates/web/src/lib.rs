@@ -1,6 +1,7 @@
 pub mod api;
 pub mod assets;
 pub mod state;
+pub mod writeback;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -10,7 +11,7 @@ use axum::extract::Request;
 use axum::http::StatusCode;
 use axum::middleware::{self, Next};
 use axum::response::IntoResponse;
-use axum::routing::get;
+use axum::routing::{get, post};
 
 use state::AppState;
 
@@ -26,6 +27,10 @@ pub fn build_router(state: Arc<AppState>, web_config: &WebConfig) -> Router {
     let api_routes = Router::new()
         .route("/api/graph", get(api::get_graph))
         .route("/api/status", get(api::get_status))
+        .route("/api/spec/{*id}", get(api::get_spec))
+        .route("/api/sync", post(api::post_sync))
+        .route("/api/writeback", post(api::post_writeback))
+        .route("/api/writeback/undo", post(api::post_undo))
         .with_state(state.clone());
 
     let asset_routes = Router::new()

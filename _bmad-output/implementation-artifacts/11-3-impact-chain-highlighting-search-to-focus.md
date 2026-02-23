@@ -1,6 +1,6 @@
 # Story 11.3: Impact Chain Highlighting & Search-to-Focus
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
