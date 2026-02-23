@@ -4,7 +4,8 @@ use rmcp::ErrorData as McpError;
 use rmcp::RoleServer;
 use rmcp::handler::server::ServerHandler;
 use rmcp::model::{
-    CallToolRequestMethod, CallToolRequestParams, CallToolResult, ErrorCode, Implementation,
+    CallToolRequestMethod, CallToolRequestParams, CallToolResult, ErrorCode,
+    GetPromptRequestParams, GetPromptResult, Implementation, ListPromptsResult,
     ListResourcesResult, ListToolsResult, PaginatedRequestParams, ReadResourceRequestParams,
     ReadResourceResult, ResourceContents, ServerCapabilities, ServerInfo, Tool,
 };
@@ -12,10 +13,11 @@ use rmcp::service::RequestContext;
 use serde::de::DeserializeOwned;
 use serde_json::{Map, Value, json};
 
+use crate::prompts;
 use crate::resources::ResourceHandler;
 use crate::tools::{
-    AddSpecInput, FindDependenciesInput, GetSpecInput, QueryInput, SearchSpecsInput, SyncInput,
-    ToolHandler, TraceImpactInput,
+    AddCausalLinkInput, AddSpecInput, EdgeActionInput, FindDependenciesInput, GetSpecInput,
+    QueryInput, SearchSpecsInput, SyncInput, ToolHandler, TraceImpactInput,
 };
 
 #[derive(Clone)]
@@ -30,6 +32,7 @@ impl SpecDbMcpServer {
         specs_root: String,
         tantivy_dir: PathBuf,
         fjall_dir: PathBuf,
+        ai_default_trust: f64,
     ) -> Self {
         Self {
             tools: ToolHandler {
@@ -37,6 +40,7 @@ impl SpecDbMcpServer {
                 specs_root,
                 tantivy_dir: tantivy_dir.clone(),
                 fjall_dir: fjall_dir.clone(),
+                ai_default_trust,
             },
             resources: ResourceHandler { tantivy_dir, fjall_dir },
         }
@@ -106,6 +110,57 @@ impl SpecDbMcpServer {
                 })),
             ),
             Tool::new(
+                "add_causal_link",
+                "Add an AI-proposed causal edge between existing specs",
+                schema_object(json!({
+                    "type": "object",
+                    "required": ["source", "target"],
+                    "properties": {
+                        "source": { "type": "string" },
+                        "target": { "type": "string" },
+                        "edge_type": {
+                            "type": "string",
+                            "enum": ["depends_on", "constrains", "implements"],
+                            "default": "depends_on"
+                        }
+                    }
+                })),
+            ),
+            Tool::new(
+                "promote_edge",
+                "Promote an AI-inferred edge to human-curated status",
+                schema_object(json!({
+                    "type": "object",
+                    "required": ["source", "target"],
+                    "properties": {
+                        "source": { "type": "string" },
+                        "target": { "type": "string" },
+                        "edge_type": {
+                            "type": "string",
+                            "enum": ["depends_on", "constrains", "implements"],
+                            "default": "depends_on"
+                        }
+                    }
+                })),
+            ),
+            Tool::new(
+                "reject_edge",
+                "Reject and remove an AI-inferred edge from the graph",
+                schema_object(json!({
+                    "type": "object",
+                    "required": ["source", "target"],
+                    "properties": {
+                        "source": { "type": "string" },
+                        "target": { "type": "string" },
+                        "edge_type": {
+                            "type": "string",
+                            "enum": ["depends_on", "constrains", "implements"],
+                            "default": "depends_on"
+                        }
+                    }
+                })),
+            ),
+            Tool::new(
                 "sync",
                 "Run incremental or full sync",
                 schema_object(json!({
@@ -125,7 +180,11 @@ impl SpecDbMcpServer {
 impl ServerHandler for SpecDbMcpServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
-            capabilities: ServerCapabilities::builder().enable_tools().enable_resources().build(),
+            capabilities: ServerCapabilities::builder()
+                .enable_tools()
+                .enable_resources()
+                .enable_prompts()
+                .build(),
             server_info: Implementation {
                 name: "lattice".to_owned(),
                 version: "0.1.0".to_owned(),
@@ -142,6 +201,35 @@ impl ServerHandler for SpecDbMcpServer {
         _context: RequestContext<RoleServer>,
     ) -> impl Future<Output = Result<ListToolsResult, McpError>> + Send + '_ {
         std::future::ready(Ok(ListToolsResult::with_all_items(Self::tool_definitions())))
+    }
+
+    fn list_prompts(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> impl Future<Output = Result<ListPromptsResult, McpError>> + Send + '_ {
+        std::future::ready(Ok(ListPromptsResult::with_all_items(prompts::prompt_definitions())))
+    }
+
+    async fn get_prompt(
+        &self,
+        request: GetPromptRequestParams,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<GetPromptResult, McpError> {
+        let tools = self.tools.clone();
+        let handle = tokio::task::spawn_blocking(move || prompts::resolve_prompt(&tools, &request));
+
+        let value = handle
+            .await
+            .map_err(|e| McpError::internal_error(format!("prompt task join failed: {e}"), None))?;
+
+        match value {
+            Ok(result) => Ok(result),
+            Err(error) => {
+                let payload = mcp_error_payload(error);
+                Err(McpError::internal_error(payload.to_string(), None))
+            }
+        }
     }
 
     async fn call_tool(
@@ -165,6 +253,14 @@ impl ServerHandler for SpecDbMcpServer {
                 .and_then(|input| tools.find_dependencies(input)),
             "query" => parse_args::<QueryInput>(args).and_then(|input| tools.query(input)),
             "add_spec" => parse_args::<AddSpecInput>(args).and_then(|input| tools.add_spec(input)),
+            "add_causal_link" => parse_args::<AddCausalLinkInput>(args)
+                .and_then(|input| tools.add_causal_link(input)),
+            "promote_edge" => {
+                parse_args::<EdgeActionInput>(args).and_then(|input| tools.promote_edge(input))
+            }
+            "reject_edge" => {
+                parse_args::<EdgeActionInput>(args).and_then(|input| tools.reject_edge(input))
+            }
             "sync" => parse_args::<SyncInput>(args).and_then(|input| tools.sync(input)),
             _ => Err(spec_db_core::SpecDbError::ConfigError(format!("unknown tool: {tool_name}"))),
         });
@@ -231,6 +327,10 @@ fn schema_object(value: Value) -> std::sync::Arc<Map<String, Value>> {
 }
 
 fn mcp_error_payload(error: spec_db_core::SpecDbError) -> Value {
+    if let Some(payload) = decode_custom_mcp_error(&error) {
+        return payload;
+    }
+
     let (error_type, message) = match error {
         spec_db_core::SpecDbError::SearchError(msg) => ("SearchError", msg),
         spec_db_core::SpecDbError::GraphError(msg) => ("GraphError", msg),
@@ -245,4 +345,18 @@ fn mcp_error_payload(error: spec_db_core::SpecDbError) -> Value {
         "message": message,
         "context": Value::Null,
     })
+}
+
+fn decode_custom_mcp_error(error: &spec_db_core::SpecDbError) -> Option<Value> {
+    let raw = match error {
+        spec_db_core::SpecDbError::SearchError(msg)
+        | spec_db_core::SpecDbError::GraphError(msg)
+        | spec_db_core::SpecDbError::SyncError(msg)
+        | spec_db_core::SpecDbError::IngestError(msg)
+        | spec_db_core::SpecDbError::ConsistencyError(msg)
+        | spec_db_core::SpecDbError::ConfigError(msg) => msg,
+    };
+
+    let payload = raw.strip_prefix("mcp_error::")?;
+    serde_json::from_str(payload).ok()
 }

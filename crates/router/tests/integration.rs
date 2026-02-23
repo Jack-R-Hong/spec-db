@@ -3,7 +3,8 @@ use std::time::{Duration, Instant};
 
 use spec_db_causal::{CausalEngine, FjallStore};
 use spec_db_core::{
-    CausalEdge, CausalGraph, EdgeOrigin, SearchEngine, SpecDoc, SpecId, SpecNode, TrustLevel,
+    CausalEdge, CausalGraph, EdgeOrigin, EdgeType, SearchEngine, SpecDoc, SpecId, SpecNode,
+    TrustLevel,
 };
 use spec_db_router::{QueryRouter, classify};
 use spec_db_search::SearchIndex;
@@ -29,8 +30,10 @@ fn edge(source: &SpecId, target: &SpecId) -> CausalEdge {
     CausalEdge {
         source: source.clone(),
         target: target.clone(),
+        edge_type: EdgeType::DependsOn,
         trust: TrustLevel::human(),
         origin: EdgeOrigin::Human,
+        created_at: None,
     }
 }
 

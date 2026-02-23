@@ -4,7 +4,8 @@ use std::sync::Arc;
 
 use spec_db_causal::{CausalEngine, FjallStore};
 use spec_db_core::{
-    CausalEdge, CausalGraph, EdgeOrigin, SearchEngine, SpecDoc, SpecId, SpecNode, TrustLevel,
+    CausalEdge, CausalGraph, EdgeOrigin, EdgeType, SearchEngine, SpecDoc, SpecId, SpecNode,
+    TrustLevel,
 };
 use spec_db_router::{ComposedHit, QueryRouter};
 use spec_db_search::SearchIndex;
@@ -30,8 +31,10 @@ fn _human_edge(source: &str, target: &str) -> CausalEdge {
     CausalEdge {
         source: SpecId::try_new(source).unwrap(),
         target: SpecId::try_new(target).unwrap(),
+        edge_type: EdgeType::DependsOn,
         trust: TrustLevel::human(),
         origin: EdgeOrigin::Human,
+        created_at: None,
     }
 }
 

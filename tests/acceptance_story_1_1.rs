@@ -73,8 +73,10 @@ fn ac2_causal_edge_exported_and_constructible() {
     let edge = spec_db_core::CausalEdge {
         source: spec_db_core::SpecId::try_new("spec::a::src").unwrap(),
         target: spec_db_core::SpecId::try_new("spec::b::tgt").unwrap(),
+        edge_type: spec_db_core::EdgeType::DependsOn,
         trust: spec_db_core::TrustLevel::human(),
         origin: spec_db_core::EdgeOrigin::Human,
+        created_at: None,
     };
     assert_eq!(edge.source.as_ref(), "spec::a::src");
     assert_eq!(edge.target.as_ref(), "spec::b::tgt");

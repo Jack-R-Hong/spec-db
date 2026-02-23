@@ -1,6 +1,6 @@
 use spec_db_core::{
-    CausalEdge, CausalGraph, EdgeOrigin, SearchEngine, SpecDbError, SpecDoc, SpecId, SpecNode,
-    TrustLevel,
+    CausalEdge, CausalGraph, EdgeOrigin, EdgeType, SearchEngine, SpecDbError, SpecDoc, SpecId,
+    SpecNode, TrustLevel,
 };
 
 use crate::parser::parse_spec;
@@ -30,8 +30,10 @@ impl<S: SearchEngine, G: CausalGraph> IngestPipeline<S, G> {
             .map(|dep| CausalEdge {
                 source: doc.id.clone(),
                 target: dep.clone(),
+                edge_type: EdgeType::DependsOn,
                 trust: TrustLevel::human(),
                 origin: EdgeOrigin::Human,
+                created_at: None,
             })
             .collect();
 

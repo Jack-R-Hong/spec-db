@@ -1,0 +1,38 @@
+rust_library(
+    name = "spec-db-search",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    visibility = ["PUBLIC"],
+    deps = [
+        "//crates/core:spec-db-core",
+        "//third-party:serde_json",
+        "//third-party:tantivy",
+        "//third-party:thiserror",
+        "//third-party:tracing",
+    ],
+)
+
+rust_test(
+    name = "spec-db-search-test",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "//crates/core:spec-db-core",
+        "//third-party:serde_json",
+        "//third-party:tantivy",
+        "//third-party:tempfile",
+        "//third-party:thiserror",
+        "//third-party:tracing",
+    ],
+)
+
+rust_test(
+    name = "spec-db-search-integration",
+    srcs = glob(["tests/**/*.rs"]),
+    crate_root = "tests/integration.rs",
+    deps = [
+        ":spec-db-search",
+        "//crates/core:spec-db-core",
+        "//third-party:tempfile",
+    ],
+)

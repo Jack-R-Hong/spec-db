@@ -1,0 +1,48 @@
+rust_library(
+    name = "spec-db-ingest",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    visibility = ["PUBLIC"],
+    deps = [
+        "//crates/causal:spec-db-causal",
+        "//crates/core:spec-db-core",
+        "//crates/search:spec-db-search",
+        "//third-party:git2",
+        "//third-party:pulldown-cmark",
+        "//third-party:serde",
+        "//third-party:serde_yml",
+        "//third-party:thiserror",
+        "//third-party:tracing",
+    ],
+)
+
+rust_test(
+    name = "spec-db-ingest-test",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "//crates/causal:spec-db-causal",
+        "//crates/core:spec-db-core",
+        "//crates/search:spec-db-search",
+        "//third-party:git2",
+        "//third-party:pulldown-cmark",
+        "//third-party:serde",
+        "//third-party:serde_yml",
+        "//third-party:tempfile",
+        "//third-party:thiserror",
+        "//third-party:tracing",
+    ],
+)
+
+rust_test(
+    name = "spec-db-ingest-integration",
+    srcs = glob(["tests/**/*.rs"]),
+    crate_root = "tests/integration.rs",
+    deps = [
+        ":spec-db-ingest",
+        "//crates/causal:spec-db-causal",
+        "//crates/core:spec-db-core",
+        "//crates/search:spec-db-search",
+        "//third-party:tempfile",
+    ],
+)

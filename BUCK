@@ -1,0 +1,20 @@
+rust_binary(
+    name = "lattice",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/main.rs",
+    deps = [
+        "//crates/causal:spec-db-causal",
+        "//crates/core:spec-db-core",
+        "//crates/ingest:spec-db-ingest",
+        "//crates/mcp:spec-db-mcp",
+        "//crates/router:spec-db-router",
+        "//crates/search:spec-db-search",
+        "//third-party:anyhow",
+        "//third-party:clap",
+        "//third-party:rmcp",
+        "//third-party:serde_yml",
+        "//third-party:tokio",
+        "//third-party:tracing",
+        "//third-party:tracing-subscriber",
+    ],
+)

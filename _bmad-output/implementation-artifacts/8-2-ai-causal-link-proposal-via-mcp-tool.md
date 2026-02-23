@@ -1,6 +1,6 @@
 # Story 8.2: AI Causal Link Proposal via MCP Tool
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -34,35 +34,35 @@ so that I can grow the causal knowledge graph as I discover relationships during
 
 ## Tasks / Subtasks
 
-- [ ] Add `ai.default_trust` config field (AC: 5)
-  - [ ] Extend config struct in `crates/core/` or config module to include `ai.default_trust: f64` with default `0.5`
-  - [ ] Parse from `.lattice/config.yaml` during startup
-  - [ ] Validate range: must be `0.0..=1.0`
-- [ ] Implement `add_causal_link` MCP tool handler (AC: 1, 2, 3, 4)
-  - [ ] Define tool input schema: `source: String`, `target: String`, `edge_type: String` (optional, default "depends_on")
-  - [ ] Register tool in MCP server's tool list with description
-  - [ ] Validate `source` and `target` are valid `SpecId` format
-  - [ ] Validate `source != target` (reject self-referencing)
-  - [ ] Parse `edge_type` string into `EdgeType` enum (reject unknown types)
-  - [ ] Check both source and target specs exist in the graph
-  - [ ] Check no duplicate edge exists (same source, target, edge_type)
-  - [ ] Create `CausalEdge` with `trust: config.ai.default_trust`, `origin: AiInferred`, parsed `edge_type`
-  - [ ] Insert edge into `CausaloidGraph` and persist to Fjall KV
-  - [ ] Return success response with the created edge details
-- [ ] Implement error responses matching MCP error shape (AC: 2, 3, 4)
-  - [ ] `not_found`: source or target spec not in graph
-  - [ ] `validation_error`: self-referencing edge
-  - [ ] `conflict`: duplicate edge
-  - [ ] All errors use shape: `{ error_type, message, context }`
-- [ ] Add tests (AC: 1-5)
-  - [ ] Unit test: successful edge creation with default trust
-  - [ ] Unit test: successful edge creation with custom trust from config
-  - [ ] Unit test: error on non-existent source
-  - [ ] Unit test: error on non-existent target
-  - [ ] Unit test: error on self-referencing edge
-  - [ ] Unit test: error on duplicate edge
-  - [ ] Unit test: edge_type parsing (all 3 variants + invalid)
-  - [ ] Integration test: full MCP tool call round-trip
+- [x] Add `ai.default_trust` config field (AC: 5)
+  - [x] Extend config struct in `crates/core/` or config module to include `ai.default_trust: f64` with default `0.5`
+  - [x] Parse from `.lattice/config.yaml` during startup
+  - [x] Validate range: must be `0.0..=1.0`
+- [x] Implement `add_causal_link` MCP tool handler (AC: 1, 2, 3, 4)
+  - [x] Define tool input schema: `source: String`, `target: String`, `edge_type: String` (optional, default "depends_on")
+  - [x] Register tool in MCP server's tool list with description
+  - [x] Validate `source` and `target` are valid `SpecId` format
+  - [x] Validate `source != target` (reject self-referencing)
+  - [x] Parse `edge_type` string into `EdgeType` enum (reject unknown types)
+  - [x] Check both source and target specs exist in the graph
+  - [x] Check no duplicate edge exists (same source, target, edge_type)
+  - [x] Create `CausalEdge` with `trust: config.ai.default_trust`, `origin: AiInferred`, parsed `edge_type`
+  - [x] Insert edge into `CausaloidGraph` and persist to Fjall KV
+  - [x] Return success response with the created edge details
+- [x] Implement error responses matching MCP error shape (AC: 2, 3, 4)
+  - [x] `not_found`: source or target spec not in graph
+  - [x] `validation_error`: self-referencing edge
+  - [x] `conflict`: duplicate edge
+  - [x] All errors use shape: `{ error_type, message, context }`
+- [x] Add tests (AC: 1-5)
+  - [x] Unit test: successful edge creation with default trust
+  - [x] Unit test: successful edge creation with custom trust from config
+  - [x] Unit test: error on non-existent source
+  - [x] Unit test: error on non-existent target
+  - [x] Unit test: error on self-referencing edge
+  - [x] Unit test: error on duplicate edge
+  - [x] Unit test: edge_type parsing (all 3 variants + invalid)
+  - [x] Integration test: full MCP tool call round-trip
 
 ## Dev Notes
 
@@ -88,10 +88,28 @@ so that I can grow the causal knowledge graph as I discover relationships during
 
 ### Agent Model Used
 
+openai/gpt-5.3-codex
+
 ### Debug Log References
 
 ### Completion Notes List
 
+- Added `AiConfig` with `ai.default_trust` defaulting to `0.5` and added load-time validation for `0.0..=1.0`.
+- Registered new MCP tool `add_causal_link` with schema (`source`, `target`, optional `edge_type`) and server dispatch wiring.
+- Implemented causal-link creation flow with SpecId validation, self-edge rejection, edge type parsing, source/target existence checks, duplicate checks, and insertion as `origin: Ai` using configured trust.
+- Added structured MCP error payload support (`{ error_type, message, context }`) for tool-level `not_found`, `validation_error`, and `conflict` responses.
+- Added/updated tests for config parsing/validation and MCP causal-link behavior; `cargo test --workspace` and `cargo clippy --workspace -- -D warnings` pass.
+
 ### Change Log
 
+- 2026-02-23: Implemented Story 8.2 with config trust extension, MCP `add_causal_link` tool, error payload handling, and test coverage.
+
 ### File List
+
+- `crates/core/src/config.rs`
+- `crates/core/src/lib.rs`
+- `crates/mcp/src/tools.rs`
+- `crates/mcp/src/server.rs`
+- `crates/mcp/tests/integration.rs`
+- `src/main.rs`
+- `tests/acceptance_story_6_2.rs`

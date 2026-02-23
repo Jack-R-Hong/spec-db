@@ -190,8 +190,10 @@ impl SpecStore for FjallStore {
             .map(|dep| CausalEdge {
                 source: doc.id.clone(),
                 target: dep.clone(),
+                edge_type: spec_db_core::EdgeType::DependsOn,
                 trust: spec_db_core::TrustLevel::human(),
                 origin: spec_db_core::EdgeOrigin::Human,
+                created_at: None,
             })
             .collect();
         self.put_node_with_edges(&node, &edges)

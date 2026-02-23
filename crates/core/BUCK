@@ -1,0 +1,23 @@
+rust_library(
+    name = "spec-db-core",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    visibility = ["PUBLIC"],
+    deps = [
+        "//third-party:serde",
+        "//third-party:serde_yml",
+        "//third-party:thiserror",
+    ],
+)
+
+rust_test(
+    name = "spec-db-core-test",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "//third-party:serde",
+        "//third-party:serde_yml",
+        "//third-party:thiserror",
+        "//third-party:tempfile",
+    ],
+)

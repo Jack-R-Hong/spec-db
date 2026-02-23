@@ -13,6 +13,7 @@ members = [
     "crates/ingest",
     "crates/router",
     "crates/mcp",
+    "crates/web",
 ]
 
 [workspace.dependencies]
@@ -34,12 +35,16 @@ rmcp = "=0.16.0"
 schemars = "0.8"
 axum = "0.8"
 bincode = { version = "=2.0.1", features = ["serde"] }
+rust-embed = { version = "8", features = ["interpolate-folder-path"] }
+tower-http = { version = "0.6", features = ["cors"] }
+mime_guess = "2"
 spec-db-core = { path = "crates/core" }
 spec-db-causal = { path = "crates/causal" }
 spec-db-search = { path = "crates/search" }
 spec-db-ingest = { path = "crates/ingest" }
 spec-db-router = { path = "crates/router" }
 spec-db-mcp = { path = "crates/mcp" }
+spec-db-web = { path = "crates/web" }
 
 [dependencies]
 anyhow = { workspace = true }
@@ -52,6 +57,7 @@ spec-db-search = { workspace = true }
 spec-db-ingest = { workspace = true }
 spec-db-router = { workspace = true }
 spec-db-mcp = { workspace = true }
+spec-db-web = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

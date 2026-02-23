@@ -1,0 +1,48 @@
+rust_library(
+    name = "spec-db-mcp",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    visibility = ["PUBLIC"],
+    deps = [
+        "//crates/causal:spec-db-causal",
+        "//crates/core:spec-db-core",
+        "//crates/ingest:spec-db-ingest",
+        "//crates/router:spec-db-router",
+        "//crates/search:spec-db-search",
+        "//third-party:rmcp",
+        "//third-party:serde",
+        "//third-party:serde_json",
+        "//third-party:tokio",
+        "//third-party:tracing",
+    ],
+)
+
+rust_test(
+    name = "spec-db-mcp-test",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "//crates/causal:spec-db-causal",
+        "//crates/core:spec-db-core",
+        "//crates/ingest:spec-db-ingest",
+        "//crates/router:spec-db-router",
+        "//crates/search:spec-db-search",
+        "//third-party:rmcp",
+        "//third-party:serde",
+        "//third-party:serde_json",
+        "//third-party:tempfile",
+        "//third-party:tokio",
+        "//third-party:tracing",
+    ],
+)
+
+rust_test(
+    name = "spec-db-mcp-integration",
+    srcs = glob(["tests/**/*.rs"]),
+    crate_root = "tests/integration.rs",
+    deps = [
+        ":spec-db-mcp",
+        "//crates/core:spec-db-core",
+        "//third-party:tempfile",
+    ],
+)

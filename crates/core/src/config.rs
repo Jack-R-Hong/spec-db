@@ -14,6 +14,16 @@ pub struct SpecDbConfig {
     pub transport: TransportConfig,
     #[serde(default)]
     pub telemetry: TelemetryConfig,
+    #[serde(default)]
+    pub ai: AiConfig,
+    #[serde(default)]
+    pub web: WebConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AiConfig {
+    #[serde(default = "default_ai_trust")]
+    pub default_trust: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,6 +49,31 @@ pub struct HttpConfig {
     pub port: u16,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_web_host")]
+    pub host: String,
+    #[serde(default = "default_web_port")]
+    pub port: u16,
+    pub auth_token: Option<String>,
+}
+
+impl Default for WebConfig {
+    fn default() -> Self {
+        Self { enabled: true, host: default_web_host(), port: default_web_port(), auth_token: None }
+    }
+}
+
+fn default_web_host() -> String {
+    "127.0.0.1".to_owned()
+}
+
+fn default_web_port() -> u16 {
+    3000
+}
+
 fn default_specs_dir() -> String {
     "specs".to_owned()
 }
@@ -55,6 +90,10 @@ fn default_protocol() -> String {
     "grpc".to_owned()
 }
 
+fn default_ai_trust() -> f64 {
+    0.5
+}
+
 impl Default for SpecDbConfig {
     fn default() -> Self {
         Self {
@@ -62,7 +101,15 @@ impl Default for SpecDbConfig {
             data_dir: default_data_dir(),
             transport: TransportConfig::default(),
             telemetry: TelemetryConfig::default(),
+            ai: AiConfig::default(),
+            web: WebConfig::default(),
         }
+    }
+}
+
+impl Default for AiConfig {
+    fn default() -> Self {
+        Self { default_trust: default_ai_trust() }
     }
 }
 
@@ -81,8 +128,17 @@ impl Default for TransportConfig {
 pub fn load_config(path: &Path) -> Result<SpecDbConfig, SpecDbError> {
     let content = std::fs::read_to_string(path)
         .map_err(|e| SpecDbError::ConfigError(format!("failed to read config: {e}")))?;
-    serde_yml::from_str(&content)
-        .map_err(|e| SpecDbError::ConfigError(format!("invalid config YAML: {e}")))
+    let config: SpecDbConfig = serde_yml::from_str(&content)
+        .map_err(|e| SpecDbError::ConfigError(format!("invalid config YAML: {e}")))?;
+
+    if !(0.0..=1.0).contains(&config.ai.default_trust) {
+        return Err(SpecDbError::ConfigError(format!(
+            "invalid ai.default_trust '{}': must be between 0.0 and 1.0",
+            config.ai.default_trust
+        )));
+    }
+
+    Ok(config)
 }
 
 #[cfg(test)]
@@ -99,6 +155,7 @@ mod tests {
         assert!(!config.telemetry.enabled);
         assert!(config.telemetry.endpoint.is_none());
         assert_eq!(config.telemetry.protocol, "grpc");
+        assert!((config.ai.default_trust - 0.5).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -130,6 +187,7 @@ mod tests {
         let http = config.transport.http.unwrap();
         assert_eq!(http.host, "127.0.0.1");
         assert_eq!(http.port, 8080);
+        assert!((config.ai.default_trust - 0.5).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -176,5 +234,32 @@ mod tests {
         assert!(!config.telemetry.enabled);
         assert!(config.telemetry.endpoint.is_none());
         assert_eq!(config.telemetry.protocol, "grpc");
+        assert!((config.ai.default_trust - 0.5).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn ai_default_trust_from_yaml() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let config_path = temp_dir.path().join("config.yaml");
+        std::fs::write(&config_path, "ai:\n  default_trust: 0.7\n").unwrap();
+
+        let config = load_config(&config_path).unwrap();
+        assert!((config.ai.default_trust - 0.7).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn ai_default_trust_out_of_range_fails_validation() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let config_path = temp_dir.path().join("config.yaml");
+        std::fs::write(&config_path, "ai:\n  default_trust: 1.5\n").unwrap();
+
+        let err = load_config(&config_path).unwrap_err();
+        match err {
+            SpecDbError::ConfigError(message) => {
+                assert!(message.contains("invalid ai.default_trust"));
+                assert!(message.contains("between 0.0 and 1.0"));
+            }
+            _ => panic!("expected ConfigError"),
+        }
     }
 }

@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use git2::{IndexAddOption, Repository, Signature};
 use spec_db_causal::{CausalEngine, FjallStore};
-use spec_db_core::{CausalGraph, SearchEngine, SpecDbError, SpecId};
+use spec_db_core::{CausalGraph, EdgeOrigin, EdgeType, SearchEngine, SpecDbError, SpecId};
 use spec_db_ingest::{
     ConsistencyStatus, GitSync, IngestPipeline, StorePaths, verify_cross_store_consistency,
 };
@@ -218,6 +218,9 @@ fn ingest_forward_reference() {
     let edges = pipeline.graph().edges_from(&source_id).unwrap();
     assert_eq!(edges.len(), 1);
     assert_eq!(edges[0].target, target_id);
+    assert_eq!(edges[0].edge_type, EdgeType::DependsOn);
+    assert_eq!(edges[0].origin, EdgeOrigin::Human);
+    assert!((edges[0].trust.value() - 1.0).abs() < f64::EPSILON);
 
     let target_added = pipeline.add_spec(FORWARD_TARGET_SPEC).unwrap();
     assert_eq!(target_added.as_ref(), "spec::auth::token");

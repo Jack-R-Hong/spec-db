@@ -5,7 +5,7 @@ use std::sync::Arc;
 use rmcp::model::ResourceContents;
 use rmcp::serde_json::Value;
 use spec_db_causal::{CausalEngine, FjallStore};
-use spec_db_core::{CausalGraph, EdgeOrigin, SpecDoc, SpecId, TrustLevel};
+use spec_db_core::{CausalGraph, EdgeOrigin, EdgeType, SpecDoc, SpecId, TrustLevel};
 use spec_db_mcp::resources::{ResourceHandler, ResourceUri, parse_resource_uri};
 use spec_db_search::SearchIndex;
 
@@ -75,8 +75,10 @@ fn _seed_resources() -> (tempfile::TempDir, ResourceHandler) {
         .add_edge(spec_db_core::CausalEdge {
             source: doc_a.id,
             target: doc_b.id,
+            edge_type: EdgeType::DependsOn,
             trust: TrustLevel::human(),
             origin: EdgeOrigin::Human,
+            created_at: None,
         })
         .unwrap();
 
@@ -129,13 +131,11 @@ fn ac3_graph_node_resource_returns_inbound_and_outbound_edges() {
     assert!(payload.get("inbound").and_then(Value::as_array).is_some());
 }
 
-/// AC4: HTTP auth token enforcement is deferred; no auth-token parsing/401 path exists yet.
+/// AC4: HTTP auth token is now supported in WebConfig (Phase 2, Story 11.1).
 #[test]
-fn ac4_http_auth_is_not_wired_in_current_scope() {
-    let core_config = include_str!("../crates/core/src/config.rs");
-    let main_source = include_str!("../src/main.rs");
-    assert!(!core_config.contains("auth_token"));
-    assert!(!main_source.contains("401"));
+fn ac4_http_auth_token_is_available_in_config() {
+    let cfg = spec_db_core::SpecDbConfig::default();
+    assert!(cfg.web.auth_token.is_none());
 }
 
 /// AC5: Without HTTP transport config, runtime remains stdio-only with no network surface.

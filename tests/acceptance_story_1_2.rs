@@ -1,7 +1,7 @@
 //! Acceptance tests for Story 1.2: Fjall Persistent Storage for Causal Graph
 
 use spec_db_causal::FjallStore;
-use spec_db_core::{CausalEdge, EdgeOrigin, SpecId, SpecNode, TrustLevel};
+use spec_db_core::{CausalEdge, EdgeOrigin, EdgeType, SpecId, SpecNode, TrustLevel};
 
 fn spec_id(value: &str) -> SpecId {
     SpecId::try_new(value).unwrap()
@@ -15,8 +15,10 @@ fn edge(source: &SpecNode, target: &SpecNode) -> CausalEdge {
     CausalEdge {
         source: source.id.clone(),
         target: target.id.clone(),
+        edge_type: EdgeType::DependsOn,
         trust: TrustLevel::human(),
         origin: EdgeOrigin::Human,
+        created_at: None,
     }
 }
 

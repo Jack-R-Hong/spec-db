@@ -54,6 +54,26 @@ enum Commands {
     },
     Rebuild,
     Status,
+    Edge {
+        #[command(subcommand)]
+        action: EdgeAction,
+    },
+}
+
+#[derive(Subcommand)]
+enum EdgeAction {
+    Promote {
+        source: String,
+        target: String,
+        #[arg(long, default_value = "depends_on")]
+        r#type: String,
+    },
+    Reject {
+        source: String,
+        target: String,
+        #[arg(long, default_value = "depends_on")]
+        r#type: String,
+    },
 }
 
 #[tokio::main]
@@ -82,6 +102,10 @@ async fn run_command(command: Commands) -> anyhow::Result<()> {
         Commands::Status => {
             let cfg = load_project_config(&cwd)?;
             run_status(&cwd, &cfg)
+        }
+        Commands::Edge { action } => {
+            let cfg = load_project_config(&cwd)?;
+            run_edge_action(&cwd, &cfg, action)
         }
     }
 }
@@ -172,14 +196,44 @@ async fn run_serve(cwd: &Path, cfg: &SpecDbConfig) -> anyhow::Result<()> {
     }
 
     let server = SpecDbMcpServer::new(
-        layout.repo_path,
-        layout.specs_root,
-        layout.tantivy_dir,
-        layout.fjall_dir,
+        layout.repo_path.clone(),
+        layout.specs_root.clone(),
+        layout.tantivy_dir.clone(),
+        layout.fjall_dir.clone(),
+        cfg.ai.default_trust,
     );
 
-    let service = server.serve(rmcp::transport::io::stdio()).await?;
-    let _ = service.waiting().await?;
+    if cfg.web.enabled {
+        let web_state =
+            spec_db_web::state::AppState::new(layout.tantivy_dir, layout.fjall_dir, cfg.clone());
+
+        let web_config = spec_db_web::WebConfig {
+            host: cfg.web.host.clone(),
+            port: cfg.web.port,
+            auth_token: cfg.web.auth_token.clone(),
+        };
+
+        let router = spec_db_web::build_router(web_state, &web_config);
+        let web_host = cfg.web.host.clone();
+        let web_port = cfg.web.port;
+
+        let web_handle = tokio::spawn(async move {
+            if let Err(e) = spec_db_web::start_web_server(router, &web_host, web_port).await {
+                tracing::error!("web server error: {e}");
+            }
+        });
+
+        let service = server.serve(rmcp::transport::io::stdio()).await?;
+
+        tokio::select! {
+            result = service.waiting() => { let _ = result?; }
+            _ = web_handle => {}
+        }
+    } else {
+        let service = server.serve(rmcp::transport::io::stdio()).await?;
+        let _ = service.waiting().await?;
+    }
+
     Ok(())
 }
 
@@ -209,6 +263,45 @@ fn run_status(cwd: &Path, cfg: &SpecDbConfig) -> anyhow::Result<()> {
     println!("last_sync_sha: {last_sync_sha}");
     println!("consistency: {consistency}");
     Ok(())
+}
+
+fn run_edge_action(cwd: &Path, cfg: &SpecDbConfig, action: EdgeAction) -> anyhow::Result<()> {
+    let layout = app_layout(cwd, cfg);
+    let handler = spec_db_mcp::ToolHandler {
+        repo_path: layout.repo_path,
+        specs_root: layout.specs_root,
+        tantivy_dir: layout.tantivy_dir,
+        fjall_dir: layout.fjall_dir,
+        ai_default_trust: cfg.ai.default_trust,
+    };
+
+    let (tool_name, input) = match action {
+        EdgeAction::Promote { source, target, r#type } => {
+            ("promote", spec_db_mcp::EdgeActionInput { source, target, edge_type: Some(r#type) })
+        }
+        EdgeAction::Reject { source, target, r#type } => {
+            ("reject", spec_db_mcp::EdgeActionInput { source, target, edge_type: Some(r#type) })
+        }
+    };
+
+    let result = if tool_name == "promote" {
+        handler.promote_edge(input)
+    } else {
+        handler.reject_edge(input)
+    };
+
+    match result {
+        Ok(value) => {
+            if let Some(msg) = value.get("message").and_then(|v| v.as_str()) {
+                println!("{msg}");
+            }
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("error: {e}");
+            std::process::exit(1);
+        }
+    }
 }
 
 fn run_git_sync(

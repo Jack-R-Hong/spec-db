@@ -1,6 +1,6 @@
 # Story 8.1: Edge Type Expansion & Trust Score Visibility
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -30,35 +30,35 @@ so that I can model richer architectural relationships and distinguish human-cur
 
 ## Tasks / Subtasks
 
-- [ ] Add `EdgeType` enum to `crates/core/src/types.rs` (AC: 1)
-  - [ ] Define `#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)] pub enum EdgeType { DependsOn, Constrains, Implements }`
-  - [ ] Implement `Default for EdgeType` returning `DependsOn`
-  - [ ] Implement `Display` for EdgeType (lowercase snake_case: `depends_on`, `constrains`, `implements`)
-  - [ ] Implement `FromStr` for EdgeType with error on unknown variants
-- [ ] Add `EdgeOrigin` enum to `crates/core/src/types.rs` (AC: 2)
-  - [ ] Define `#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)] pub enum EdgeOrigin { Human, AiInferred }`
-  - [ ] Implement `Display` for EdgeOrigin
-- [ ] Extend `CausalEdge` struct with new fields (AC: 1, 2)
-  - [ ] Add `edge_type: EdgeType` field with `#[serde(default)]`
-  - [ ] Add `trust: f64` field (existing or new — verify current struct shape)
-  - [ ] Add `origin: EdgeOrigin` field with `#[serde(default = "EdgeOrigin::human")]`
-  - [ ] Ensure `Default` impl sets `edge_type: DependsOn`, `trust: 1.0`, `origin: Human`
-- [ ] Update ingestion pipeline to set new fields on human-curated edges (AC: 3)
-  - [ ] In `crates/ingest/src/` where `CausalEdge` is constructed from frontmatter `depends_on`, set `edge_type: DependsOn`, `trust: 1.0`, `origin: Human`
-- [ ] Update MCP tool responses to include new fields (AC: 2)
-  - [ ] In `trace_impact` response serialization, include `edge_type`, `trust`, `origin`
-  - [ ] In `find_dependencies` response serialization, include `edge_type`, `trust`, `origin`
-- [ ] Update Fjall KV serialization (AC: 4)
-  - [ ] Verify bincode serialization of updated `CausalEdge` round-trips correctly
-  - [ ] Add migration path: edges deserialized without new fields get defaults (`DependsOn`, `1.0`, `Human`)
-- [ ] Export new types from `spec-db-core/src/lib.rs` (AC: 1)
-  - [ ] Add `EdgeType` and `EdgeOrigin` to public re-exports
-- [ ] Update and add tests (AC: 1, 2, 3, 4)
-  - [ ] Unit tests for `EdgeType` Display/FromStr round-trip
-  - [ ] Unit tests for `CausalEdge` serde with new fields
-  - [ ] Unit tests for backward-compatible deserialization (missing fields → defaults)
-  - [ ] Integration test: ingest a spec → verify edge has correct `edge_type`, `trust`, `origin`
-  - [ ] Verify all 175 existing tests still pass
+- [x] Add `EdgeType` enum to `crates/core/src/types.rs` (AC: 1)
+  - [x] Define `#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)] pub enum EdgeType { DependsOn, Constrains, Implements }`
+  - [x] Implement `Default for EdgeType` returning `DependsOn`
+  - [x] Implement `Display` for EdgeType (lowercase snake_case: `depends_on`, `constrains`, `implements`)
+  - [x] Implement `FromStr` for EdgeType with error on unknown variants
+- [x] Add `EdgeOrigin` enum to `crates/core/src/types.rs` (AC: 2)
+  - [x] Define `#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)] pub enum EdgeOrigin { Human, AiInferred }`
+  - [x] Implement `Display` for EdgeOrigin
+- [x] Extend `CausalEdge` struct with new fields (AC: 1, 2)
+  - [x] Add `edge_type: EdgeType` field with `#[serde(default)]`
+  - [x] Add `trust: f64` field (existing or new — verify current struct shape)
+  - [x] Add `origin: EdgeOrigin` field with `#[serde(default = "EdgeOrigin::human")]`
+  - [x] Ensure `Default` impl sets `edge_type: DependsOn`, `trust: 1.0`, `origin: Human`
+- [x] Update ingestion pipeline to set new fields on human-curated edges (AC: 3)
+  - [x] In `crates/ingest/src/` where `CausalEdge` is constructed from frontmatter `depends_on`, set `edge_type: DependsOn`, `trust: 1.0`, `origin: Human`
+- [x] Update MCP tool responses to include new fields (AC: 2)
+  - [x] In `trace_impact` response serialization, include `edge_type`, `trust`, `origin`
+  - [x] In `find_dependencies` response serialization, include `edge_type`, `trust`, `origin`
+- [x] Update Fjall KV serialization (AC: 4)
+  - [x] Verify bincode serialization of updated `CausalEdge` round-trips correctly
+  - [x] Add migration path: edges deserialized without new fields get defaults (`DependsOn`, `1.0`, `Human`)
+- [x] Export new types from `spec-db-core/src/lib.rs` (AC: 1)
+  - [x] Add `EdgeType` and `EdgeOrigin` to public re-exports
+- [x] Update and add tests (AC: 1, 2, 3, 4)
+  - [x] Unit tests for `EdgeType` Display/FromStr round-trip
+  - [x] Unit tests for `CausalEdge` serde with new fields
+  - [x] Unit tests for backward-compatible deserialization (missing fields → defaults)
+  - [x] Integration test: ingest a spec → verify edge has correct `edge_type`, `trust`, `origin`
+  - [x] Verify all 175 existing tests still pass
 
 ## Dev Notes
 
@@ -83,10 +83,43 @@ so that I can model richer architectural relationships and distinguish human-cur
 
 ### Agent Model Used
 
+openai/gpt-5.3-codex
+
 ### Debug Log References
+
+- `cargo test --workspace`
+- `cargo clippy --workspace -- -D warnings`
 
 ### Completion Notes List
 
+- Added `EdgeType` to core domain types with `Display`, `FromStr`, and default `DependsOn` behavior.
+- Added `edge_type` to `CausalEdge` with `#[serde(default)]` and propagated it through causal engine metadata/storage/rebuild paths.
+- Updated frontmatter ingestion (`depends_on`) to produce `EdgeType::DependsOn` human edges.
+- Updated MCP `trace_impact` and `find_dependencies` edge payloads to include `edge_type`, `trust`, and `origin`.
+- Updated all touched test edge helpers and inline fixtures to set `edge_type` explicitly.
+- Added and extended tests for `EdgeType` round-trip/default, CausalEdge serde/backward compatibility, and ingestion edge metadata assertions.
+- Verified `cargo test --workspace` and `cargo clippy --workspace -- -D warnings` are green.
+
 ### Change Log
 
+- Implemented Story 8.1 edge-type expansion and trust/origin visibility across core, causal, ingest, and MCP layers.
+- Added regression coverage for edge metadata propagation and backward-compatible edge deserialization.
+
 ### File List
+
+- `crates/core/src/types.rs`
+- `crates/core/src/lib.rs`
+- `crates/causal/src/engine.rs`
+- `crates/causal/src/store.rs`
+- `crates/ingest/src/pipeline.rs`
+- `crates/mcp/src/tools.rs`
+- `crates/causal/tests/integration.rs`
+- `crates/ingest/tests/integration.rs`
+- `crates/router/tests/integration.rs`
+- `tests/acceptance_story_1_1.rs`
+- `tests/acceptance_story_1_2.rs`
+- `tests/acceptance_story_1_4.rs`
+- `tests/acceptance_story_5_2.rs`
+- `tests/acceptance_story_6_2.rs`
+- `tests/acceptance_story_6_3.rs`
+- `tests/acceptance_story_7_1.rs`

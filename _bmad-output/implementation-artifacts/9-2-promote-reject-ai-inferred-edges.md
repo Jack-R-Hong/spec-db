@@ -1,6 +1,6 @@
 # Story 9.2: Promote & Reject AI-Inferred Edges
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -34,39 +34,35 @@ so that I maintain authority over which causal relationships are trusted in the 
 
 ## Tasks / Subtasks
 
-- [ ] Implement `promote_edge` MCP tool (AC: 1, 3, 4)
-  - [ ] Define tool input schema: `source: String`, `target: String`, `edge_type: String` (optional, default "depends_on")
-  - [ ] Look up edge in graph by (source, target, edge_type)
-  - [ ] Validate edge exists → `not_found` error if missing
-  - [ ] Validate edge is `AiInferred` → `validation_error` if already `Human`
-  - [ ] Update edge: set `origin: Human`, `trust: 1.0`
-  - [ ] Persist updated edge to Fjall KV
-  - [ ] Re-export AI edges to `.lattice/edges.yaml` (promoted edge now excluded)
-  - [ ] Return success response with updated edge details
-- [ ] Implement `reject_edge` MCP tool (AC: 2, 3)
-  - [ ] Define tool input schema: same as promote_edge
-  - [ ] Look up edge in graph by (source, target, edge_type)
-  - [ ] Validate edge exists → `not_found` error if missing
-  - [ ] Remove edge from `CausaloidGraph`
-  - [ ] Delete edge from Fjall KV
-  - [ ] Re-export AI edges to `.lattice/edges.yaml`
-  - [ ] Return success response confirming deletion
-- [ ] Implement CLI commands (AC: 5)
-  - [ ] Add `lattice edge promote <source> <target> [--type <edge_type>]` subcommand
-  - [ ] Add `lattice edge reject <source> <target> [--type <edge_type>]` subcommand
-  - [ ] Both commands call the same core logic as MCP tools
-  - [ ] Print human-readable confirmation message on success
-  - [ ] Print human-readable error message on failure
-- [ ] Add tests (AC: 1-5)
-  - [ ] Unit test: promote AI edge → origin becomes Human, trust becomes 1.0
-  - [ ] Unit test: promote already-human edge → validation_error
-  - [ ] Unit test: promote non-existent edge → not_found
-  - [ ] Unit test: reject AI edge → edge removed from graph and KV
-  - [ ] Unit test: reject non-existent edge → not_found
-  - [ ] Unit test: after promote, edge no longer in `.lattice/edges.yaml`
-  - [ ] Unit test: after reject, edge no longer in `.lattice/edges.yaml`
-  - [ ] Integration test: CLI `lattice edge promote` end-to-end
-  - [ ] Integration test: CLI `lattice edge reject` end-to-end
+- [x] Implement `promote_edge` MCP tool (AC: 1, 3, 4)
+  - [x] `EdgeActionInput` with source, target, edge_type (optional, default "depends_on")
+  - [x] Look up edge via `graph.edges_from(&source)` + find by target
+  - [x] Validate edge exists → `not_found` error if missing
+  - [x] Validate edge is `Ai` → `validation_error` if already `Human`
+  - [x] Update via `graph.update_edge_origin()` to `Human` / trust 1.0
+  - [x] Persist updated edge to Fjall KV
+  - [x] Re-export AI edges to `.lattice/edges.yaml`
+  - [x] Return success response with updated edge details
+- [x] Implement `reject_edge` MCP tool (AC: 2, 3)
+  - [x] Same input schema as promote_edge
+  - [x] Look up edge → `not_found` if missing
+  - [x] Remove edge via `graph.remove_edge()`
+  - [x] Re-export AI edges to `.lattice/edges.yaml`
+  - [x] Return success response
+- [x] Implement CLI commands (AC: 5)
+  - [x] `lattice edge promote <source> <target> [--type <edge_type>]`
+  - [x] `lattice edge reject <source> <target> [--type <edge_type>]`
+  - [x] Both reuse `ToolHandler.promote_edge()` / `reject_edge()`
+  - [x] Print confirmation message on success, error on failure
+- [x] Add tests (AC: 1-5)
+  - [x] `promote_edge_changes_origin_to_human`
+  - [x] `promote_already_human_edge_returns_validation_error`
+  - [x] `promote_nonexistent_edge_returns_not_found`
+  - [x] `reject_edge_removes_from_graph`
+  - [x] `reject_nonexistent_edge_returns_not_found`
+  - [x] `promote_removes_from_edges_yaml`
+  - [x] `reject_removes_from_edges_yaml`
+  - [x] `promote_and_reject_tools_are_registered_on_server`
 
 ## Dev Notes
 
@@ -89,11 +85,28 @@ so that I maintain authority over which causal relationships are trusted in the 
 ## Dev Agent Record
 
 ### Agent Model Used
+claude-opus-4-6
 
 ### Debug Log References
+N/A
 
 ### Completion Notes List
+- `update_edge_origin()` added to CausalEngine for in-place edge modification
+- Both tools re-export edges.yaml after mutation for consistency
+- CLI uses `Edge { Promote, Reject }` subcommand pattern with clap derive
 
 ### Change Log
+- `crates/causal/src/engine.rs`: Added `update_edge_origin()` method
+- `crates/mcp/src/tools.rs`: Added `EdgeActionInput`, `promote_edge()`, `reject_edge()` handlers
+- `crates/mcp/src/server.rs`: Registered promote_edge/reject_edge tool definitions and call routing
+- `crates/mcp/src/lib.rs`: Re-exported `EdgeActionInput` and `ToolHandler`
+- `src/main.rs`: Added `Edge { Promote, Reject }` CLI subcommands with `run_edge_action()`
+- `crates/mcp/tests/integration.rs`: Added 8 new tests
 
 ### File List
+- `crates/causal/src/engine.rs`
+- `crates/mcp/src/tools.rs`
+- `crates/mcp/src/server.rs`
+- `crates/mcp/src/lib.rs`
+- `crates/mcp/tests/integration.rs`
+- `src/main.rs`

@@ -93,27 +93,27 @@ development_status:
   # ============================================================
 
   # Epic 8: AI-Inferred Causal Links & Trust Scoring
-  epic-8: backlog
-  8-1-edge-type-expansion-trust-score-visibility: ready-for-dev
-  8-2-ai-causal-link-proposal-via-mcp-tool: ready-for-dev
-  8-3-deepcausality-csm-validation-for-ai-proposed-edges: ready-for-dev
+  epic-8: done
+  8-1-edge-type-expansion-trust-score-visibility: done
+  8-2-ai-causal-link-proposal-via-mcp-tool: done
+  8-3-deepcausality-csm-validation-for-ai-proposed-edges: done
   epic-8-retrospective: optional
 
   # Epic 9: Human Review & Edge Curation
-  epic-9: backlog
-  9-1-ai-inferred-edge-export-to-yaml: ready-for-dev
-  9-2-promote-reject-ai-inferred-edges: ready-for-dev
+  epic-9: done
+  9-1-ai-inferred-edge-export-to-yaml: done
+  9-2-promote-reject-ai-inferred-edges: done
   epic-9-retrospective: optional
 
   # Epic 10: MCP Prompts for Structured Agent Workflows
-  epic-10: backlog
-  10-1-impact-analysis-mcp-prompt: ready-for-dev
-  10-2-spec-review-mcp-prompt: ready-for-dev
+  epic-10: done
+  10-1-impact-analysis-mcp-prompt: done
+  10-2-spec-review-mcp-prompt: done
   epic-10-retrospective: optional
 
   # Epic 11: Causal Graph Web UI — Visualization & Exploration
-  epic-11: backlog
-  11-1-web-server-scaffold-static-asset-embedding: ready-for-dev
+  epic-11: in-progress
+  11-1-web-server-scaffold-static-asset-embedding: done
   11-2-svelte-flow-graph-rendering-with-force-directed-layout: ready-for-dev
   11-3-impact-chain-highlighting-search-to-focus: ready-for-dev
   11-4-detail-panel-spec-inspection: ready-for-dev

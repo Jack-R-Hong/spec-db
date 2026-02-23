@@ -76,7 +76,13 @@ fn _setup_handler() -> (TempDir, ToolHandler) {
     _git(&["add", "."], &repo_path);
     _git(&["commit", "-m", "seed specs"], &repo_path);
 
-    let handler = ToolHandler { repo_path, specs_root: "specs".to_owned(), tantivy_dir, fjall_dir };
+    let handler = ToolHandler {
+        repo_path,
+        specs_root: "specs".to_owned(),
+        tantivy_dir,
+        fjall_dir,
+        ai_default_trust: 0.5,
+    };
     (dir, handler)
 }
 
@@ -105,6 +111,7 @@ fn ac1_tool_names_are_exposed_for_discovery() {
         "find_dependencies",
         "query",
         "add_spec",
+        "add_causal_link",
         "sync",
     ] {
         assert!(source.contains(&format!("\"{name}\"")), "missing tool name: {name}");
@@ -163,6 +170,9 @@ fn ac4_graph_tools_return_node_and_edges_shape() {
     assert!(dep_edges[0].get("from").is_some());
     assert!(dep_edges[0].get("to").is_some());
     assert_eq!(dep_edges[0].get("type").and_then(|value| value.as_str()), Some("depends_on"));
+    assert_eq!(dep_edges[0].get("edge_type").and_then(|value| value.as_str()), Some("depends_on"));
+    assert_eq!(dep_edges[0].get("trust").and_then(|value| value.as_f64()), Some(1.0));
+    assert_eq!(dep_edges[0].get("origin").and_then(|value| value.as_str()), Some("human"));
 }
 
 /// AC5: `query` delegates to router and returns composed JSON fields.

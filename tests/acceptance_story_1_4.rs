@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use spec_db_causal::{CausalEngine, FjallStore};
 use spec_db_core::{
-    CausalEdge, CausalGraph, EdgeOrigin, SpecDbError, SpecId, SpecNode, TrustLevel,
+    CausalEdge, CausalGraph, EdgeOrigin, EdgeType, SpecDbError, SpecId, SpecNode, TrustLevel,
 };
 
 fn spec_id(value: &str) -> SpecId {
@@ -20,8 +20,10 @@ fn human_edge(source: &SpecNode, target: &SpecNode) -> CausalEdge {
     CausalEdge {
         source: source.id.clone(),
         target: target.id.clone(),
+        edge_type: EdgeType::DependsOn,
         trust: TrustLevel::human(),
         origin: EdgeOrigin::Human,
+        created_at: None,
     }
 }
 

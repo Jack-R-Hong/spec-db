@@ -113,12 +113,58 @@ pub enum EdgeOrigin {
     Ai,
 }
 
+impl fmt::Display for EdgeOrigin {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let value = match self {
+            Self::Human => "human",
+            Self::Ai => "ai",
+        };
+        f.write_str(value)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum EdgeType {
+    #[default]
+    DependsOn,
+    Constrains,
+    Implements,
+}
+
+impl fmt::Display for EdgeType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let value = match self {
+            Self::DependsOn => "depends_on",
+            Self::Constrains => "constrains",
+            Self::Implements => "implements",
+        };
+        f.write_str(value)
+    }
+}
+
+impl FromStr for EdgeType {
+    type Err = SpecDbError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "depends_on" => Ok(Self::DependsOn),
+            "constrains" => Ok(Self::Constrains),
+            "implements" => Ok(Self::Implements),
+            _ => Err(SpecDbError::IngestError(format!("invalid EdgeType '{s}'"))),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CausalEdge {
     pub source: SpecId,
     pub target: SpecId,
+    #[serde(default)]
+    pub edge_type: EdgeType,
     pub trust: TrustLevel,
     pub origin: EdgeOrigin,
+    #[serde(default)]
+    pub created_at: Option<String>,
 }
 
 #[cfg(test)]
@@ -208,5 +254,53 @@ mod tests {
         let msg = err.to_string();
         assert!(msg.contains("invalid SpecId"));
         assert!(msg.contains("bad"));
+    }
+
+    #[test]
+    fn edge_type_display_from_str_roundtrip() {
+        for edge_type in [EdgeType::DependsOn, EdgeType::Constrains, EdgeType::Implements] {
+            let rendered = edge_type.to_string();
+            let reparsed: EdgeType = rendered.parse().unwrap();
+            assert_eq!(reparsed, edge_type);
+        }
+    }
+
+    #[test]
+    fn edge_type_default_is_depends_on() {
+        assert_eq!(EdgeType::default(), EdgeType::DependsOn);
+    }
+
+    #[test]
+    fn causal_edge_serde_includes_edge_type() {
+        let edge = CausalEdge {
+            source: SpecId::try_new("spec::svc::api").unwrap(),
+            target: SpecId::try_new("spec::svc::auth").unwrap(),
+            edge_type: EdgeType::Constrains,
+            trust: TrustLevel::new(0.8),
+            origin: EdgeOrigin::Ai,
+            created_at: Some("2026-02-23T10:00:00Z".to_owned()),
+        };
+
+        let encoded = serde_yml::to_string(&edge).unwrap();
+        assert!(encoded.contains("edge_type: Constrains"));
+
+        let decoded: CausalEdge = serde_yml::from_str(&encoded).unwrap();
+        assert_eq!(decoded.edge_type, EdgeType::Constrains);
+        assert!((decoded.trust.value() - 0.8).abs() < f64::EPSILON);
+        assert_eq!(decoded.origin, EdgeOrigin::Ai);
+    }
+
+    #[test]
+    fn causal_edge_serde_missing_edge_type_defaults_to_depends_on() {
+        let encoded = r#"
+source: spec::svc::api
+target: spec::svc::auth
+trust: 1.0
+origin: Human
+"#;
+        let decoded: CausalEdge = serde_yml::from_str(encoded).unwrap();
+        assert_eq!(decoded.edge_type, EdgeType::DependsOn);
+        assert_eq!(decoded.origin, EdgeOrigin::Human);
+        assert!((decoded.trust.value() - 1.0).abs() < f64::EPSILON);
     }
 }

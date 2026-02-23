@@ -172,9 +172,14 @@ fn parse_meta<'a>(
     for (key, value) in object_entries {
         match key {
             "version" => {
-                let raw_version = value.as_u64().ok_or_else(|| {
-                    SpecDbError::SearchError(format!("invalid meta.version for spec '{doc_id}'"))
-                })?;
+                let raw_version = value
+                    .as_u64()
+                    .or_else(|| value.as_i64().and_then(|v| u64::try_from(v).ok()))
+                    .ok_or_else(|| {
+                        SpecDbError::SearchError(format!(
+                            "invalid meta.version for spec '{doc_id}'"
+                        ))
+                    })?;
                 let converted_version = u32::try_from(raw_version).map_err(|_| {
                     SpecDbError::SearchError(format!(
                         "meta.version out of range for spec '{doc_id}'"

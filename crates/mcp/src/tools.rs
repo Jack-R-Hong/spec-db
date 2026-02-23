@@ -1,10 +1,13 @@
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use serde::Deserialize;
 use serde_json::{Value, json};
 use spec_db_causal::{CausalEngine, FjallStore};
-use spec_db_core::{CausalGraph, SpecDbError, SpecId};
+use spec_db_core::{
+    CausalEdge, CausalGraph, EdgeOrigin, EdgeType, SpecDbError, SpecId, TrustLevel,
+};
 use spec_db_ingest::{GitSync, IngestPipeline, StorePaths};
 use spec_db_router::QueryRouter;
 use spec_db_search::{SearchIndex, query};
@@ -47,12 +50,29 @@ pub struct SyncInput {
     pub mode: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct AddCausalLinkInput {
+    pub source: String,
+    pub target: String,
+    #[serde(default)]
+    pub edge_type: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct EdgeActionInput {
+    pub source: String,
+    pub target: String,
+    #[serde(default)]
+    pub edge_type: Option<String>,
+}
+
 #[derive(Clone)]
 pub struct ToolHandler {
     pub repo_path: PathBuf,
     pub specs_root: String,
     pub tantivy_dir: PathBuf,
     pub fjall_dir: PathBuf,
+    pub ai_default_trust: f64,
 }
 
 impl ToolHandler {
@@ -151,10 +171,238 @@ impl ToolHandler {
         }))
     }
 
+    pub fn add_causal_link(&self, input: AddCausalLinkInput) -> Result<Value, SpecDbError> {
+        let source = parse_spec_id("source", &input.source)?;
+        let target = parse_spec_id("target", &input.target)?;
+
+        if source == target {
+            return Err(tool_error(
+                "validation_error",
+                "Self-referencing edges are not allowed",
+                Value::Null,
+            ));
+        }
+
+        let edge_type_raw = input.edge_type.unwrap_or_else(|| "depends_on".to_owned());
+        let edge_type = EdgeType::from_str(edge_type_raw.as_str()).map_err(|_| {
+            tool_error(
+                "validation_error",
+                "Invalid edge type",
+                json!({
+                    "edge_type": edge_type_raw,
+                    "allowed": ["depends_on", "constrains", "implements"],
+                }),
+            )
+        })?;
+
+        let mut graph = self.open_graph()?;
+        if graph.get_node(&source)?.is_none() {
+            return Err(tool_error(
+                "not_found",
+                "Source spec not found",
+                json!({ "id": source.to_string() }),
+            ));
+        }
+
+        if graph.get_node(&target)?.is_none() {
+            return Err(tool_error(
+                "not_found",
+                "Target spec not found",
+                json!({ "id": target.to_string() }),
+            ));
+        }
+
+        if let Some(existing) =
+            graph.edges_from(&source)?.into_iter().find(|edge| edge.target == target)
+        {
+            return Err(tool_error(
+                "conflict",
+                "Edge already exists",
+                json!({
+                    "source": source.to_string(),
+                    "target": target.to_string(),
+                    "existing_edge_type": existing.edge_type.to_string(),
+                    "edge_type": edge_type.to_string(),
+                }),
+            ));
+        }
+
+        if let Some(cycle) = graph.validate_no_cycle(&source, &target)? {
+            return Err(tool_error(
+                "csm_validation_failed",
+                "Proposed edge creates a causal cycle",
+                json!({ "cycle": cycle }),
+            ));
+        }
+
+        let edge = CausalEdge {
+            source: source.clone(),
+            target: target.clone(),
+            edge_type,
+            trust: TrustLevel::new(self.ai_default_trust),
+            origin: EdgeOrigin::Ai,
+            created_at: Some(now_iso8601()),
+        };
+
+        graph.add_edge(edge.clone())?;
+
+        let lattice_dir = self.repo_path.join(".lattice");
+        let all_edges = graph.all_edges()?;
+        spec_db_causal::export::export_ai_edges(&all_edges, &lattice_dir)?;
+
+        Ok(json!({
+            "status": "ok",
+            "message": "causal link added",
+            "edge": edge_to_json(edge),
+        }))
+    }
+
+    pub fn promote_edge(&self, input: EdgeActionInput) -> Result<Value, SpecDbError> {
+        let source = parse_spec_id("source", &input.source)?;
+        let target = parse_spec_id("target", &input.target)?;
+        let edge_type_raw = input.edge_type.unwrap_or_else(|| "depends_on".to_owned());
+        let _edge_type = EdgeType::from_str(edge_type_raw.as_str()).map_err(|_| {
+            tool_error(
+                "validation_error",
+                "Invalid edge type",
+                json!({ "edge_type": edge_type_raw }),
+            )
+        })?;
+
+        let mut graph = self.open_graph()?;
+
+        let existing = graph.edges_from(&source)?.into_iter().find(|e| e.target == target);
+
+        let edge = existing.ok_or_else(|| {
+            tool_error(
+                "not_found",
+                "Edge not found",
+                json!({ "source": source.to_string(), "target": target.to_string(), "edge_type": edge_type_raw }),
+            )
+        })?;
+
+        if edge.origin == EdgeOrigin::Human {
+            return Err(tool_error(
+                "validation_error",
+                "Edge is already human-curated",
+                json!({ "source": source.to_string(), "target": target.to_string() }),
+            ));
+        }
+
+        graph.update_edge_origin(&source, &target, EdgeOrigin::Human, TrustLevel::human())?;
+
+        let lattice_dir = self.repo_path.join(".lattice");
+        let all_edges = graph.all_edges()?;
+        spec_db_causal::export::export_ai_edges(&all_edges, &lattice_dir)?;
+
+        Ok(json!({
+            "status": "ok",
+            "message": "edge promoted to human-curated",
+            "edge": {
+                "from": source.to_string(),
+                "to": target.to_string(),
+                "edge_type": edge.edge_type.to_string(),
+                "trust": 1.0,
+                "origin": "human",
+            }
+        }))
+    }
+
+    pub fn reject_edge(&self, input: EdgeActionInput) -> Result<Value, SpecDbError> {
+        let source = parse_spec_id("source", &input.source)?;
+        let target = parse_spec_id("target", &input.target)?;
+        let edge_type_raw = input.edge_type.unwrap_or_else(|| "depends_on".to_owned());
+        let _edge_type = EdgeType::from_str(edge_type_raw.as_str()).map_err(|_| {
+            tool_error(
+                "validation_error",
+                "Invalid edge type",
+                json!({ "edge_type": edge_type_raw }),
+            )
+        })?;
+
+        let mut graph = self.open_graph()?;
+
+        let existing = graph.edges_from(&source)?.into_iter().find(|e| e.target == target);
+
+        if existing.is_none() {
+            return Err(tool_error(
+                "not_found",
+                "Edge not found",
+                json!({ "source": source.to_string(), "target": target.to_string(), "edge_type": edge_type_raw }),
+            ));
+        }
+
+        graph.remove_edge(&source, &target)?;
+
+        let lattice_dir = self.repo_path.join(".lattice");
+        let all_edges = graph.all_edges()?;
+        spec_db_causal::export::export_ai_edges(&all_edges, &lattice_dir)?;
+
+        Ok(json!({
+            "status": "ok",
+            "message": "edge rejected and removed",
+            "edge": {
+                "from": source.to_string(),
+                "to": target.to_string(),
+                "edge_type": edge_type_raw,
+            }
+        }))
+    }
+
     fn open_graph(&self) -> Result<CausalEngine, SpecDbError> {
         let store = Arc::new(FjallStore::open(&self.fjall_dir)?);
         CausalEngine::from_store(store)
     }
+}
+
+fn parse_spec_id(field: &str, raw: &str) -> Result<SpecId, SpecDbError> {
+    SpecId::try_new(raw).map_err(|_| {
+        tool_error(
+            "validation_error",
+            "Invalid spec id",
+            json!({
+                "field": field,
+                "id": raw,
+            }),
+        )
+    })
+}
+
+fn now_iso8601() -> String {
+    use std::time::SystemTime;
+    let duration = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default();
+    let secs = duration.as_secs();
+    let days = secs / 86400;
+    let time_of_day = secs % 86400;
+    let hours = time_of_day / 3600;
+    let minutes = (time_of_day % 3600) / 60;
+    let seconds = time_of_day % 60;
+
+    let (year, month, day) = epoch_days_to_ymd(days as i64);
+    format!("{year:04}-{month:02}-{day:02}T{hours:02}:{minutes:02}:{seconds:02}Z")
+}
+
+fn epoch_days_to_ymd(mut days: i64) -> (i32, u32, u32) {
+    days += 719_468;
+    let era = if days >= 0 { days } else { days - 146_096 } / 146_097;
+    let doe = (days - era * 146_097) as u32;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
+    let y = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if m <= 2 { y + 1 } else { y };
+    (y as i32, m, d)
+}
+
+fn tool_error(error_type: &str, message: &str, context: Value) -> SpecDbError {
+    let payload = json!({
+        "error_type": error_type,
+        "message": message,
+        "context": context,
+    });
+    SpecDbError::IngestError(format!("mcp_error::{}", payload))
 }
 
 fn execute_search_with_optional_tags(
@@ -188,6 +436,9 @@ fn edge_to_json(edge: spec_db_core::CausalEdge) -> Value {
     json!({
         "from": edge.source.to_string(),
         "to": edge.target.to_string(),
-        "type": "depends_on",
+        "type": edge.edge_type.to_string(),
+        "edge_type": edge.edge_type.to_string(),
+        "trust": edge.trust.value(),
+        "origin": edge.origin.to_string(),
     })
 }

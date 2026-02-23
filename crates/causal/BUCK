@@ -1,0 +1,42 @@
+rust_library(
+    name = "spec-db-causal",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    visibility = ["PUBLIC"],
+    deps = [
+        "//crates/core:spec-db-core",
+        "//third-party:bincode",
+        "//third-party:deep_causality",
+        "//third-party:fjall",
+        "//third-party:serde",
+        "//third-party:tracing",
+        "//third-party:ultragraph",
+    ],
+)
+
+rust_test(
+    name = "spec-db-causal-test",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "//crates/core:spec-db-core",
+        "//third-party:bincode",
+        "//third-party:deep_causality",
+        "//third-party:fjall",
+        "//third-party:serde",
+        "//third-party:tempfile",
+        "//third-party:tracing",
+        "//third-party:ultragraph",
+    ],
+)
+
+rust_test(
+    name = "spec-db-causal-integration",
+    srcs = glob(["tests/**/*.rs"]),
+    crate_root = "tests/integration.rs",
+    deps = [
+        ":spec-db-causal",
+        "//crates/core:spec-db-core",
+        "//third-party:tempfile",
+    ],
+)

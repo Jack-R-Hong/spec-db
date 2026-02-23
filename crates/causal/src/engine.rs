@@ -1,10 +1,22 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
-use spec_db_core::{CausalEdge, CausalGraph, SpecDbError, SpecId, SpecNode};
+use deep_causality::{
+    CausableGraph, Causaloid, CausaloidGraph, IdentificationValue, PropagatingEffect,
+};
+use spec_db_core::{
+    CausalEdge, CausalGraph, EdgeOrigin, EdgeType, SpecDbError, SpecId, SpecNode, TrustLevel,
+};
+use ultragraph::GraphTraversal;
 
 use crate::store::FjallStore;
 use crate::traversal;
+
+type SpecCausaloid = Causaloid<bool, bool, (), ()>;
+
+fn identity_causal_fn(input: bool) -> PropagatingEffect<bool> {
+    PropagatingEffect::from_value(input)
+}
 
 pub struct NodeView {
     pub node: SpecNode,
@@ -14,18 +26,24 @@ pub struct NodeView {
 
 pub struct CausalEngine {
     store: Arc<FjallStore>,
+    graph: CausaloidGraph<SpecCausaloid>,
+    id_to_index: HashMap<String, usize>,
+    index_to_id: HashMap<usize, String>,
     nodes: HashMap<String, SpecNode>,
-    outbound_edges: HashMap<String, Vec<CausalEdge>>,
-    inbound_edges: HashMap<String, Vec<CausalEdge>>,
+    edge_meta: HashMap<(usize, usize), (TrustLevel, EdgeOrigin, EdgeType)>,
+    next_causaloid_id: IdentificationValue,
 }
 
 impl CausalEngine {
     pub fn from_store(store: Arc<FjallStore>) -> Result<Self, SpecDbError> {
         let mut engine = Self {
             store,
+            graph: CausaloidGraph::new(0),
+            id_to_index: HashMap::new(),
+            index_to_id: HashMap::new(),
             nodes: HashMap::new(),
-            outbound_edges: HashMap::new(),
-            inbound_edges: HashMap::new(),
+            edge_meta: HashMap::new(),
+            next_causaloid_id: 0,
         };
         engine.load_from_store()?;
         Ok(engine)
@@ -33,35 +51,101 @@ impl CausalEngine {
 
     #[tracing::instrument(name = "spec_db.graph.load", skip(self))]
     pub fn load_from_store(&mut self) -> Result<(), SpecDbError> {
+        self.graph = CausaloidGraph::new(0);
+        self.id_to_index.clear();
+        self.index_to_id.clear();
         self.nodes.clear();
-        self.outbound_edges.clear();
-        self.inbound_edges.clear();
+        self.edge_meta.clear();
+        self.next_causaloid_id = 0;
 
-        let all_nodes = self.store.iter_nodes()?;
+        let mut all_nodes = self.store.iter_nodes()?;
+        all_nodes.sort_by(|a, b| a.id.as_ref().cmp(b.id.as_ref()));
+
         for node in all_nodes {
             let key = node.id.as_ref().to_owned();
+            self.add_causaloid_for_id(&node.id, node.title.as_str())?;
             self.nodes.insert(key, node);
         }
 
-        let all_edges = self.store.iter_edges()?;
+        let mut all_edges = self.store.iter_edges()?;
+        all_edges.sort_by(|a, b| {
+            a.source.as_ref().cmp(b.source.as_ref()).then(a.target.as_ref().cmp(b.target.as_ref()))
+        });
+
         for edge in all_edges {
-            self.index_edge(edge);
+            let source = self.ensure_index_for_id(&edge.source)?;
+            let target = self.ensure_index_for_id(&edge.target)?;
+            self.graph
+                .add_edge(source, target)
+                .map_err(|e| SpecDbError::GraphError(format!("failed to add edge: {e}")))?;
+            self.edge_meta.insert((source, target), (edge.trust, edge.origin, edge.edge_type));
         }
+
+        self.graph.freeze();
 
         tracing::info!(
             nodes = self.nodes.len(),
-            edges = self.outbound_edges.values().map(|v| v.len()).sum::<usize>(),
+            edges = self.edge_meta.len(),
             "graph loaded from store"
         );
 
         Ok(())
     }
 
-    fn index_edge(&mut self, edge: CausalEdge) {
-        let src_key = edge.source.as_ref().to_owned();
-        let tgt_key = edge.target.as_ref().to_owned();
-        self.inbound_edges.entry(tgt_key).or_default().push(edge.clone());
-        self.outbound_edges.entry(src_key).or_default().push(edge);
+    fn add_causaloid_for_id(
+        &mut self,
+        id: &SpecId,
+        description: &str,
+    ) -> Result<usize, SpecDbError> {
+        let causaloid = SpecCausaloid::new(self.next_causaloid_id, identity_causal_fn, description);
+        self.next_causaloid_id = self.next_causaloid_id.saturating_add(1);
+        let index = self
+            .graph
+            .add_causaloid(causaloid)
+            .map_err(|e| SpecDbError::GraphError(format!("failed to add causaloid: {e}")))?;
+        let key = id.as_ref().to_owned();
+        self.id_to_index.insert(key.clone(), index);
+        self.index_to_id.insert(index, key);
+        Ok(index)
+    }
+
+    fn ensure_index_for_id(&mut self, id: &SpecId) -> Result<usize, SpecDbError> {
+        if let Some(index) = self.id_to_index.get(id.as_ref()).copied() {
+            return Ok(index);
+        }
+        self.add_causaloid_for_id(id, id.as_ref())
+    }
+
+    pub fn all_edges(&self) -> Result<Vec<CausalEdge>, SpecDbError> {
+        self.store.iter_edges()
+    }
+
+    pub fn update_edge_origin(
+        &mut self,
+        source: &SpecId,
+        target: &SpecId,
+        new_origin: EdgeOrigin,
+        new_trust: TrustLevel,
+    ) -> Result<(), SpecDbError> {
+        let src_index = self.index_for_spec_id(source)?;
+        let tgt_index = self.index_for_spec_id(target)?;
+
+        let meta = self.edge_meta.get_mut(&(src_index, tgt_index)).ok_or_else(|| {
+            SpecDbError::GraphError(format!("Edge not found: {source} -> {target}"))
+        })?;
+
+        meta.0 = new_trust;
+        meta.1 = new_origin;
+
+        let updated_edge = CausalEdge {
+            source: source.clone(),
+            target: target.clone(),
+            edge_type: meta.2,
+            trust: new_trust,
+            origin: new_origin,
+            created_at: None,
+        };
+        self.store.put_edge(&updated_edge)
     }
 
     pub fn node_view(&self, id: &SpecId) -> Result<NodeView, SpecDbError> {
@@ -72,8 +156,8 @@ impl CausalEngine {
             .ok_or_else(|| SpecDbError::GraphError(format!("node not found: {id}")))?
             .clone();
 
-        let outbound_edges = self.outbound_edges.get(key).cloned().unwrap_or_default();
-        let inbound_edges = self.inbound_edges.get(key).cloned().unwrap_or_default();
+        let outbound_edges = self.edges_from(id)?;
+        let inbound_edges = self.edges_to(id)?;
 
         Ok(NodeView { node, inbound_edges, outbound_edges })
     }
@@ -84,29 +168,205 @@ impl CausalEngine {
         }
         Ok(())
     }
+
+    fn spec_id_for_index(&self, index: usize) -> Result<SpecId, SpecDbError> {
+        let id = self.index_to_id.get(&index).ok_or_else(|| {
+            SpecDbError::GraphError(format!("missing SpecId mapping for graph index {index}"))
+        })?;
+        SpecId::try_new(id.clone())
+    }
+
+    fn index_for_spec_id(&self, id: &SpecId) -> Result<usize, SpecDbError> {
+        self.id_to_index
+            .get(id.as_ref())
+            .copied()
+            .ok_or_else(|| SpecDbError::GraphError(format!("Spec not found: {id}")))
+    }
+
+    pub fn has_path(&self, from: usize, to: usize) -> Result<Option<Vec<String>>, SpecDbError> {
+        if !self.index_to_id.contains_key(&from) {
+            return Err(SpecDbError::GraphError(format!(
+                "missing SpecId mapping for graph index {from}"
+            )));
+        }
+
+        if !self.index_to_id.contains_key(&to) {
+            return Err(SpecDbError::GraphError(format!(
+                "missing SpecId mapping for graph index {to}"
+            )));
+        }
+
+        if from == to {
+            return Ok(Some(vec![self.spec_id_for_index(from)?.to_string()]));
+        }
+
+        let mut visited = HashSet::new();
+        let mut queue = VecDeque::new();
+        let mut parent: HashMap<usize, usize> = HashMap::new();
+
+        visited.insert(from);
+        queue.push_back(from);
+
+        while let Some(current) = queue.pop_front() {
+            for neighbor in self.outbound_neighbors(current)? {
+                if !visited.insert(neighbor) {
+                    continue;
+                }
+
+                parent.insert(neighbor, current);
+
+                if neighbor == to {
+                    return self.reconstruct_path(from, to, &parent).map(Some);
+                }
+
+                queue.push_back(neighbor);
+            }
+        }
+
+        Ok(None)
+    }
+
+    pub fn validate_no_cycle(
+        &self,
+        source: &SpecId,
+        target: &SpecId,
+    ) -> Result<Option<Vec<String>>, SpecDbError> {
+        let source_index = self.index_for_spec_id(source)?;
+        let target_index = self.index_for_spec_id(target)?;
+
+        if source_index == target_index {
+            let source_id = source.to_string();
+            return Ok(Some(vec![source_id.clone(), source_id]));
+        }
+
+        let Some(path) = self.has_path(target_index, source_index)? else {
+            return Ok(None);
+        };
+
+        let mut cycle = Vec::with_capacity(path.len() + 1);
+        cycle.push(source.to_string());
+        cycle.extend(path);
+        Ok(Some(cycle))
+    }
+
+    fn reconstruct_path(
+        &self,
+        from: usize,
+        to: usize,
+        parent: &HashMap<usize, usize>,
+    ) -> Result<Vec<String>, SpecDbError> {
+        let mut path = vec![to];
+        let mut current = to;
+
+        while current != from {
+            let previous = parent.get(&current).copied().ok_or_else(|| {
+                SpecDbError::GraphError(format!(
+                    "failed to reconstruct path from index {from} to index {to}"
+                ))
+            })?;
+            path.push(previous);
+            current = previous;
+        }
+
+        path.reverse();
+
+        path.into_iter()
+            .map(|index| self.spec_id_for_index(index).map(|id| id.to_string()))
+            .collect()
+    }
+
+    fn build_edge(&self, source: usize, target: usize) -> Result<CausalEdge, SpecDbError> {
+        let source_id = self.spec_id_for_index(source)?;
+        let target_id = self.spec_id_for_index(target)?;
+        let (trust, origin, edge_type) = self
+            .edge_meta
+            .get(&(source, target))
+            .copied()
+            .unwrap_or((TrustLevel::human(), EdgeOrigin::Human, EdgeType::DependsOn));
+
+        Ok(CausalEdge {
+            source: source_id,
+            target: target_id,
+            edge_type,
+            trust,
+            origin,
+            created_at: None,
+        })
+    }
+
+    fn inbound_neighbors(&self, index: usize) -> Result<Vec<usize>, SpecDbError> {
+        let neighbors = self
+            .graph
+            .get_graph()
+            .inbound_edges(index)
+            .map_err(|e| SpecDbError::GraphError(format!("inbound traversal failed: {e}")))?
+            .collect();
+        Ok(neighbors)
+    }
+
+    fn outbound_neighbors(&self, index: usize) -> Result<Vec<usize>, SpecDbError> {
+        let neighbors = self
+            .graph
+            .get_graph()
+            .outbound_edges(index)
+            .map_err(|e| SpecDbError::GraphError(format!("outbound traversal failed: {e}")))?
+            .collect();
+        Ok(neighbors)
+    }
 }
 
 impl CausalGraph for CausalEngine {
     fn upsert_node(&mut self, node: SpecNode) -> Result<(), SpecDbError> {
-        self.store.put_node(&node)?;
         let key = node.id.as_ref().to_owned();
-        self.nodes.insert(key, node);
-        Ok(())
+
+        self.graph.unfreeze();
+        if !self.id_to_index.contains_key(&key) {
+            let _ = self.add_causaloid_for_id(&node.id, node.title.as_str())?;
+        }
+
+        self.nodes.insert(key, node.clone());
+        let result = self.store.put_node(&node);
+        self.graph.freeze();
+        result
     }
 
     fn remove_node(&mut self, id: &SpecId) -> Result<(), SpecDbError> {
-        self.store.remove_node(id)?;
-        let key = id.as_ref();
-        self.nodes.remove(key);
-        self.outbound_edges.remove(key);
-        self.inbound_edges.remove(key);
-        for edges in self.outbound_edges.values_mut() {
-            edges.retain(|e| e.target.as_ref() != key);
+        let key = id.as_ref().to_owned();
+        let incident_edges: Vec<(SpecId, SpecId)> = self
+            .store
+            .iter_edges()?
+            .into_iter()
+            .filter(|edge| edge.source.as_ref() == key || edge.target.as_ref() == key)
+            .map(|edge| (edge.source, edge.target))
+            .collect();
+
+        self.graph.unfreeze();
+
+        if let Some(index) = self.id_to_index.remove(&key) {
+            self.index_to_id.remove(&index);
+            self.edge_meta.retain(|(source, target), _| *source != index && *target != index);
+
+            if self.graph.contains_causaloid(index) {
+                self.graph.remove_causaloid(index).map_err(|e| {
+                    SpecDbError::GraphError(format!("failed to remove causaloid {index}: {e}"))
+                })?;
+            }
         }
-        for edges in self.inbound_edges.values_mut() {
-            edges.retain(|e| e.source.as_ref() != key);
+
+        self.nodes.remove(&key);
+
+        let mut result = self.store.remove_node(id);
+        if result.is_ok() {
+            for (source, target) in incident_edges {
+                if let Err(e) = self.store.remove_edge(&source, &target) {
+                    result = Err(e);
+                    break;
+                }
+            }
         }
-        Ok(())
+
+        self.graph.freeze();
+        result
     }
 
     fn get_node(&self, id: &SpecId) -> Result<Option<SpecNode>, SpecDbError> {
@@ -114,22 +374,35 @@ impl CausalGraph for CausalEngine {
     }
 
     fn add_edge(&mut self, edge: CausalEdge) -> Result<(), SpecDbError> {
-        self.store.put_edge(&edge)?;
-        self.index_edge(edge);
-        Ok(())
+        self.graph.unfreeze();
+        let source = self.ensure_index_for_id(&edge.source)?;
+        let target = self.ensure_index_for_id(&edge.target)?;
+        self.graph
+            .add_edge(source, target)
+            .map_err(|e| SpecDbError::GraphError(format!("failed to add edge: {e}")))?;
+        self.edge_meta.insert((source, target), (edge.trust, edge.origin, edge.edge_type));
+        let result = self.store.put_edge(&edge);
+        self.graph.freeze();
+        result
     }
 
     fn remove_edge(&mut self, source: &SpecId, target: &SpecId) -> Result<(), SpecDbError> {
-        self.store.remove_edge(source, target)?;
-        let src_key = source.as_ref();
-        let tgt_key = target.as_ref();
-        if let Some(edges) = self.outbound_edges.get_mut(src_key) {
-            edges.retain(|e| e.target.as_ref() != tgt_key);
+        let src_index = self.id_to_index.get(source.as_ref()).copied();
+        let tgt_index = self.id_to_index.get(target.as_ref()).copied();
+
+        self.graph.unfreeze();
+        if let (Some(src), Some(tgt)) = (src_index, tgt_index) {
+            if self.graph.contains_edge(src, tgt) {
+                self.graph
+                    .remove_edge(src, tgt)
+                    .map_err(|e| SpecDbError::GraphError(format!("failed to remove edge: {e}")))?;
+            }
+            self.edge_meta.remove(&(src, tgt));
         }
-        if let Some(edges) = self.inbound_edges.get_mut(tgt_key) {
-            edges.retain(|e| e.source.as_ref() != src_key);
-        }
-        Ok(())
+
+        let result = self.store.remove_edge(source, target);
+        self.graph.freeze();
+        result
     }
 
     #[tracing::instrument(
@@ -139,8 +412,18 @@ impl CausalGraph for CausalEngine {
     )]
     fn trace_impact(&self, id: &SpecId, depth: Option<usize>) -> Result<Vec<SpecId>, SpecDbError> {
         self.ensure_node_exists(id)?;
-        let impacted =
-            traversal::bfs_traverse(&self.inbound_edges, id, depth, |edge| &edge.source)?;
+        let start_index = self
+            .id_to_index
+            .get(id.as_ref())
+            .copied()
+            .ok_or_else(|| SpecDbError::GraphError(format!("Spec not found: {id}")))?;
+        let impacted = traversal::bfs_traverse_indices(start_index, depth, |current| {
+            self.inbound_neighbors(current)
+        })?;
+        let impacted: Vec<SpecId> = impacted
+            .into_iter()
+            .map(|index| self.spec_id_for_index(index))
+            .collect::<Result<_, _>>()?;
         tracing::Span::current().record("result_count", impacted.len());
         Ok(impacted)
     }
@@ -156,25 +439,53 @@ impl CausalGraph for CausalEngine {
         depth: Option<usize>,
     ) -> Result<Vec<SpecId>, SpecDbError> {
         self.ensure_node_exists(id)?;
-        let dependencies =
-            traversal::bfs_traverse(&self.outbound_edges, id, depth, |edge| &edge.target)?;
+        let start_index = self
+            .id_to_index
+            .get(id.as_ref())
+            .copied()
+            .ok_or_else(|| SpecDbError::GraphError(format!("Spec not found: {id}")))?;
+        let dependencies = traversal::bfs_traverse_indices(start_index, depth, |current| {
+            self.outbound_neighbors(current)
+        })?;
+        let dependencies: Vec<SpecId> = dependencies
+            .into_iter()
+            .map(|index| self.spec_id_for_index(index))
+            .collect::<Result<_, _>>()?;
         tracing::Span::current().record("result_count", dependencies.len());
         Ok(dependencies)
     }
 
     fn edges_from(&self, id: &SpecId) -> Result<Vec<CausalEdge>, SpecDbError> {
-        Ok(self.outbound_edges.get(id.as_ref()).cloned().unwrap_or_default())
+        let Some(index) = self.id_to_index.get(id.as_ref()).copied() else {
+            return Ok(Vec::new());
+        };
+
+        self.graph
+            .get_graph()
+            .outbound_edges(index)
+            .map_err(|e| SpecDbError::GraphError(format!("outbound edge read failed: {e}")))?
+            .map(|target| self.build_edge(index, target))
+            .collect()
     }
 
     fn edges_to(&self, id: &SpecId) -> Result<Vec<CausalEdge>, SpecDbError> {
-        Ok(self.inbound_edges.get(id.as_ref()).cloned().unwrap_or_default())
+        let Some(index) = self.id_to_index.get(id.as_ref()).copied() else {
+            return Ok(Vec::new());
+        };
+
+        self.graph
+            .get_graph()
+            .inbound_edges(index)
+            .map_err(|e| SpecDbError::GraphError(format!("inbound edge read failed: {e}")))?
+            .map(|source| self.build_edge(source, index))
+            .collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spec_db_core::{EdgeOrigin, TrustLevel};
+    use spec_db_core::{EdgeOrigin, EdgeType, TrustLevel};
     use std::time::{Duration, Instant};
 
     fn temp_engine() -> (tempfile::TempDir, CausalEngine) {
@@ -196,8 +507,10 @@ mod tests {
         CausalEdge {
             source: from.id.clone(),
             target: to.id.clone(),
+            edge_type: EdgeType::DependsOn,
             trust: TrustLevel::human(),
             origin: EdgeOrigin::Human,
+            created_at: None,
         }
     }
 
@@ -234,8 +547,10 @@ mod tests {
         let edge = CausalEdge {
             source: a.id.clone(),
             target: b.id.clone(),
+            edge_type: EdgeType::DependsOn,
             trust: TrustLevel::human(),
             origin: EdgeOrigin::Human,
+            created_at: None,
         };
         engine.add_edge(edge).unwrap();
 
@@ -395,8 +710,10 @@ mod tests {
                 .add_edge(CausalEdge {
                     source: from,
                     target: to,
+                    edge_type: EdgeType::DependsOn,
                     trust: TrustLevel::human(),
                     origin: EdgeOrigin::Human,
+                    created_at: None,
                 })
                 .unwrap();
         }
@@ -464,8 +781,10 @@ mod tests {
                     .add_edge(CausalEdge {
                         source: from,
                         target: to,
+                        edge_type: EdgeType::DependsOn,
                         trust: TrustLevel::human(),
                         origin: EdgeOrigin::Human,
+                        created_at: None,
                     })
                     .unwrap();
             }
@@ -476,5 +795,122 @@ mod tests {
         let elapsed = start.elapsed();
 
         assert!(elapsed.as_secs() < 1, "startup took {elapsed:?}, exceeds 1s threshold");
+    }
+
+    #[test]
+    fn validate_no_cycle_rejects_direct_cycle() {
+        let (_dir, mut engine) = temp_engine();
+        let a = node("cycle", "a");
+        let b = node("cycle", "b");
+        engine.upsert_node(a.clone()).unwrap();
+        engine.upsert_node(b.clone()).unwrap();
+        engine.add_edge(human_edge(&a, &b)).unwrap();
+
+        let cycle =
+            engine.validate_no_cycle(&b.id, &a.id).unwrap().expect("cycle should be detected");
+        assert_eq!(cycle, vec![b.id.to_string(), a.id.to_string(), b.id.to_string()]);
+    }
+
+    #[test]
+    fn validate_no_cycle_rejects_indirect_cycle() {
+        let (_dir, mut engine) = temp_engine();
+        let a = node("cycle", "a");
+        let b = node("cycle", "b");
+        let c = node("cycle", "c");
+        engine.upsert_node(a.clone()).unwrap();
+        engine.upsert_node(b.clone()).unwrap();
+        engine.upsert_node(c.clone()).unwrap();
+        engine.add_edge(human_edge(&a, &b)).unwrap();
+        engine.add_edge(human_edge(&b, &c)).unwrap();
+
+        let cycle =
+            engine.validate_no_cycle(&c.id, &a.id).unwrap().expect("cycle should be detected");
+        assert_eq!(
+            cycle,
+            vec![c.id.to_string(), a.id.to_string(), b.id.to_string(), c.id.to_string()]
+        );
+    }
+
+    #[test]
+    fn validate_no_cycle_allows_connected_non_cycle_edge() {
+        let (_dir, mut engine) = temp_engine();
+        let a = node("cycle", "a");
+        let b = node("cycle", "b");
+        let c = node("cycle", "c");
+        engine.upsert_node(a.clone()).unwrap();
+        engine.upsert_node(b.clone()).unwrap();
+        engine.upsert_node(c.clone()).unwrap();
+        engine.add_edge(human_edge(&a, &b)).unwrap();
+
+        let cycle = engine.validate_no_cycle(&b.id, &c.id).unwrap();
+        assert!(cycle.is_none());
+    }
+
+    #[test]
+    fn validate_no_cycle_allows_disconnected_subgraph_connection() {
+        let (_dir, mut engine) = temp_engine();
+        let a = node("comp1", "a");
+        let b = node("comp1", "b");
+        let c = node("comp2", "c");
+        let d = node("comp2", "d");
+        engine.upsert_node(a.clone()).unwrap();
+        engine.upsert_node(b.clone()).unwrap();
+        engine.upsert_node(c.clone()).unwrap();
+        engine.upsert_node(d.clone()).unwrap();
+        engine.add_edge(human_edge(&a, &b)).unwrap();
+        engine.add_edge(human_edge(&c, &d)).unwrap();
+
+        let cycle = engine.validate_no_cycle(&b.id, &c.id).unwrap();
+        assert!(cycle.is_none());
+    }
+
+    #[test]
+    fn validate_no_cycle_detects_self_loop() {
+        let (_dir, mut engine) = temp_engine();
+        let a = node("self", "a");
+        engine.upsert_node(a.clone()).unwrap();
+
+        let cycle =
+            engine.validate_no_cycle(&a.id, &a.id).unwrap().expect("self loop should be detected");
+        assert_eq!(cycle, vec![a.id.to_string(), a.id.to_string()]);
+    }
+
+    #[test]
+    fn validation_perf_100_specs_under_100ms() {
+        let (_dir, mut engine) = temp_engine();
+
+        for i in 0..150 {
+            let n = SpecNode {
+                id: SpecId::try_new(format!("spec::csm-perf::node-{i}")).unwrap(),
+                title: format!("node {i}"),
+                version: 1,
+            };
+            engine.upsert_node(n).unwrap();
+        }
+
+        for i in 0..149 {
+            let from = SpecId::try_new(format!("spec::csm-perf::node-{i}")).unwrap();
+            let to = SpecId::try_new(format!("spec::csm-perf::node-{}", i + 1)).unwrap();
+            engine
+                .add_edge(CausalEdge {
+                    source: from,
+                    target: to,
+                    edge_type: EdgeType::DependsOn,
+                    trust: TrustLevel::human(),
+                    origin: EdgeOrigin::Human,
+                    created_at: None,
+                })
+                .unwrap();
+        }
+
+        let source = SpecId::try_new("spec::csm-perf::node-149").unwrap();
+        let target = SpecId::try_new("spec::csm-perf::node-0").unwrap();
+
+        let start = Instant::now();
+        let cycle = engine.validate_no_cycle(&source, &target).unwrap();
+        let elapsed = start.elapsed();
+
+        assert!(cycle.is_some(), "cycle should be detected");
+        assert!(elapsed < Duration::from_millis(100), "validation took {elapsed:?}");
     }
 }

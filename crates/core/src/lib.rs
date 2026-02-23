@@ -6,7 +6,7 @@ pub mod telemetry;
 pub mod traits;
 pub mod types;
 
-pub use config::{SpecDbConfig, TelemetryConfig, load_config};
+pub use config::{AiConfig, SpecDbConfig, TelemetryConfig, WebConfig, load_config};
 pub use error::SpecDbError;
 pub use traits::{CausalGraph, SearchEngine, SpecStore};
-pub use types::{CausalEdge, EdgeOrigin, SpecDoc, SpecId, SpecNode, TrustLevel};
+pub use types::{CausalEdge, EdgeOrigin, EdgeType, SpecDoc, SpecId, SpecNode, TrustLevel};

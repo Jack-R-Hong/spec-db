@@ -5,7 +5,7 @@ use std::process::Command;
 use std::sync::Arc;
 
 use spec_db_causal::{CausalEngine, FjallStore};
-use spec_db_core::{CausalGraph, EdgeOrigin, SpecId, SpecNode, TrustLevel};
+use spec_db_core::{CausalGraph, EdgeOrigin, EdgeType, SpecId, SpecNode, TrustLevel};
 use spec_db_ingest::{ConsistencyStatus, verify_consistency, verify_cross_store_consistency};
 use spec_db_search::SearchIndex;
 
@@ -31,8 +31,10 @@ fn _seed_store_snapshots(base: &Path) -> (String, usize, String, usize) {
         .add_edge(spec_db_core::CausalEdge {
             source: a.id.clone(),
             target: b.id.clone(),
+            edge_type: EdgeType::DependsOn,
             trust: TrustLevel::human(),
             origin: EdgeOrigin::Human,
+            created_at: None,
         })
         .unwrap();
 

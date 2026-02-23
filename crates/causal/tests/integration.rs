@@ -1,5 +1,5 @@
 use spec_db_causal::FjallStore;
-use spec_db_core::{CausalEdge, EdgeOrigin, SpecId, SpecNode, SpecStore, TrustLevel};
+use spec_db_core::{CausalEdge, EdgeOrigin, EdgeType, SpecId, SpecNode, SpecStore, TrustLevel};
 
 fn make_node(domain: &str, name: &str) -> SpecNode {
     let id_str = format!("spec::{domain}::{name}");
@@ -10,8 +10,10 @@ fn make_edge(from: &SpecNode, to: &SpecNode) -> CausalEdge {
     CausalEdge {
         source: from.id.clone(),
         target: to.id.clone(),
+        edge_type: EdgeType::DependsOn,
         trust: TrustLevel::human(),
         origin: EdgeOrigin::Human,
+        created_at: None,
     }
 }
 
@@ -45,6 +47,7 @@ fn edge_roundtrip() {
     let loaded = store.get_edge(&a.id, &b.id).unwrap().unwrap();
     assert_eq!(loaded.source.as_ref(), a.id.as_ref());
     assert_eq!(loaded.target.as_ref(), b.id.as_ref());
+    assert_eq!(loaded.edge_type, EdgeType::DependsOn);
     assert_eq!(loaded.trust.value(), 1.0);
 }
 
