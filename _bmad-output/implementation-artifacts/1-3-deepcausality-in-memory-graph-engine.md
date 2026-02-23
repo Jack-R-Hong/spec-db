@@ -1,6 +1,6 @@
 # Story 1.3: DeepCausality In-Memory Graph Engine
 
-Status: review
+Status: done
 
 ## Story
 
@@ -58,6 +58,27 @@ so that causal relationships are traversable in memory with sub-50ms performance
   - [x] Unit tests for auto-created depends_on edges with trust `1.0`
   - [x] Integration tests for restart reload correctness: persisted store -> in-memory graph parity
   - [x] Node view tests assert complete inbound/outbound edge sets
+
+### Course Correction: Replace HashMap with DeepCausality Backend (2026-02-23)
+
+- [x] Replace HashMap engine internals with DeepCausality CausaloidGraph
+  - [x] Add `CausaloidGraph<SpecCausaloid>` as primary graph structure in `CausalEngine`
+  - [x] Implement bidirectional `SpecId ↔ usize` index mapping (`HashMap<String, usize>` + `HashMap<usize, String>`)
+  - [x] Define `SpecCausaloid` type: `Causaloid<bool, bool, (), ()>`
+  - [x] Store edge metadata (`TrustLevel`, `EdgeOrigin`) in parallel `HashMap` keyed by `(usize, usize)` since DeepCausality edges carry only `u64` weight
+  - [x] Implement `freeze()` after startup load for read-optimized performance; `unfreeze()` before mutations
+  - [x] Preserve `CausalGraph` trait method signatures exactly — zero API changes
+  - [x] Preserve `FjallStore` write-through on mutations (upsert_node, add_edge, remove_node, remove_edge)
+- [x] Adapt traversal to CausaloidGraph backend
+  - [x] Re-implement BFS `trace_impact` using CausaloidGraph adjacency queries via `ultragraph::GraphTraversal`
+  - [x] Re-implement BFS `find_dependencies` using CausaloidGraph adjacency queries via `ultragraph::GraphTraversal`
+  - [x] Preserve edge direction semantics: A→B means "A depends_on B"
+- [x] Validate replacement
+  - [x] All 13 engine.rs unit tests pass (expanded from 8)
+  - [x] All 175 workspace tests pass (0 failures, 7 ignored perf tests)
+  - [x] `cargo clippy -D warnings` clean
+  - [x] Performance gates: startup < 1s, traversal < 50ms for 100+ specs
+  - [x] Verify `deep_causality` crate is actually imported and used in engine.rs
 
 ## Dev Notes
 
@@ -119,6 +140,8 @@ anthropic/claude-opus-4-6
 
 - Initial draft.
 - Implemented CausalEngine with HashMap adjacency list, CausalGraph trait impl, BFS traversal, 8 unit tests.
+- **2026-02-23 Course Correction:** Replace HashMap internals with DeepCausality `CausaloidGraph`. See `sprint-change-proposal-2026-02-23.md` for full analysis. API contract (`CausalGraph` trait) preserved — internal-only change.
+- **2026-02-23 Course Correction Complete:** Full replacement validated. 175/175 workspace tests pass, clippy clean, all acceptance tests (including forward-reference edge tests) green. Engine uses `CausaloidGraph<Causaloid<bool, bool, (), ()>>` with freeze/unfreeze lifecycle, `ultragraph::GraphTraversal` for adjacency queries, and parallel `HashMap` stores for domain data (`SpecNode`) and edge metadata (`TrustLevel`, `EdgeOrigin`).
 
 ### File List
 
