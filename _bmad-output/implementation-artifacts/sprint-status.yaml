@@ -1,46 +1,78 @@
 # Sprint Status Tracking
 # Project: lattice
 # Generated: 2026-02-23
-# Updated: 2026-02-23 (Phase 1 MVP verified and closed)
+# Updated: 2026-02-23 (Phase 2 sprint planning)
 
 # STATUS DEFINITIONS:
-#   backlog        - Not yet started
-#   ready-for-dev  - Story file created with full context
-#   in-progress    - Development in progress
-#   review         - Code review in progress
-#   done           - Story completed and verified
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed and verified
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Mark epic as 'in-progress' when starting work on its first story
+# - SM typically creates next story ONLY after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then Dev runs code-review (fresh context, ideally different LLM)
 
-# VERIFICATION: 175/175 workspace tests pass (168 run + 7 ignored perf tests)
+# PHASE 1 VERIFICATION: 175/175 workspace tests pass (168 run + 7 ignored perf tests)
 # cargo clippy --workspace -- -D warnings: clean
 # DeepCausality integration confirmed (CausaloidGraph in engine.rs)
 
+generated: 2026-02-23
+project: lattice
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
 development_status:
+  # ============================================================
+  # PHASE 1: MVP (Complete)
+  # ============================================================
+
   # Epic 1: Foundation & Causal Knowledge Graph
   epic-1: done
   1-1-scaffold-workspace-core-domain-types: done
   1-2-fjall-persistent-storage-causal-graph: done
   1-3-deepcausality-in-memory-graph-engine: done
   1-4-causal-graph-traversal: done
+  epic-1-retrospective: optional
 
   # Epic 2: Spec Discovery & Search
   epic-2: done
   2-1-tantivy-schema-definition-spec-indexing: done
   2-2-bm25-search-title-boosting-tag-filtering: done
+  epic-2-retrospective: optional
 
   # Epic 3: Spec Authoring & Ingestion
   epic-3: done
   3-1-spec-format-definition-markdown-yaml-parsing: done
   3-2-unified-spec-ingestion-pipeline: done
+  epic-3-retrospective: optional
 
   # Epic 4: Git-Centric Sync
   epic-4: done
   4-1-full-rebuild-git-tree-walk: done
   4-2-incremental-sync-git-diff: done
+  epic-4-retrospective: optional
 
   # Epic 5: Intelligent Query Routing
   epic-5: done
   5-1-query-intent-classification: done
   5-2-hybrid-query-execution-result-composition: done
+  epic-5-retrospective: optional
 
   # Epic 6: MCP Server & CLI
   epic-6: done
@@ -48,8 +80,49 @@ development_status:
   6-2-mcp-server-tools-stdio: done
   6-3-mcp-resources-streamable-http: done
   6-4-cli-administration-commands: done
+  epic-6-retrospective: optional
 
   # Epic 7: Data Integrity & Observability
   epic-7: done
   7-1-cross-store-consistency-checks: done
   7-2-opentelemetry-traces-metrics: done
+  epic-7-retrospective: optional
+
+  # ============================================================
+  # PHASE 2: Self-Growing Intelligence & Web UI
+  # ============================================================
+
+  # Epic 8: AI-Inferred Causal Links & Trust Scoring
+  epic-8: backlog
+  8-1-edge-type-expansion-trust-score-visibility: ready-for-dev
+  8-2-ai-causal-link-proposal-via-mcp-tool: ready-for-dev
+  8-3-deepcausality-csm-validation-for-ai-proposed-edges: ready-for-dev
+  epic-8-retrospective: optional
+
+  # Epic 9: Human Review & Edge Curation
+  epic-9: backlog
+  9-1-ai-inferred-edge-export-to-yaml: ready-for-dev
+  9-2-promote-reject-ai-inferred-edges: ready-for-dev
+  epic-9-retrospective: optional
+
+  # Epic 10: MCP Prompts for Structured Agent Workflows
+  epic-10: backlog
+  10-1-impact-analysis-mcp-prompt: ready-for-dev
+  10-2-spec-review-mcp-prompt: ready-for-dev
+  epic-10-retrospective: optional
+
+  # Epic 11: Causal Graph Web UI — Visualization & Exploration
+  epic-11: backlog
+  11-1-web-server-scaffold-static-asset-embedding: ready-for-dev
+  11-2-svelte-flow-graph-rendering-with-force-directed-layout: ready-for-dev
+  11-3-impact-chain-highlighting-search-to-focus: ready-for-dev
+  11-4-detail-panel-spec-inspection: ready-for-dev
+  11-5-header-bar-sync-status-rebuild-trigger-drift-warning: ready-for-dev
+  epic-11-retrospective: optional
+
+  # Epic 12: On-Canvas Graph Editing & Git Write-Back
+  epic-12: backlog
+  12-1-git-write-back-pipeline-confirmation-toast: ready-for-dev
+  12-2-drag-to-connect-edge-creation-delete-key-removal: ready-for-dev
+  12-3-frontmatter-field-editing-undo: ready-for-dev
+  epic-12-retrospective: optional
