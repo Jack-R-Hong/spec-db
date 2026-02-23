@@ -22,7 +22,7 @@ so that I can access spec intelligence through multiple access patterns and tran
 **When** the resource is read
 **Then** it returns the spec node with all inbound and outbound edges (FR31)
 
-**Given** streamable-http transport enabled in `.spec-db/config.yaml` with `http.auth_token` set
+**Given** streamable-http transport enabled in `.lattice/config.yaml` with `http.auth_token` set
 **When** an agent connects over HTTP
 **Then** requests without a valid bearer token are rejected with 401 (FR27, NFR24)
 **And** requests with a valid token are processed identically to stdio

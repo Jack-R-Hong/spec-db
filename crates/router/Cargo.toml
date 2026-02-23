@@ -3,7 +3,7 @@ name = "spec-db-router"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
-description = "Query intent classification and routing for spec-db"
+description = "Query intent classification and routing for lattice"
 
 [dependencies]
 spec-db-core = { workspace = true }

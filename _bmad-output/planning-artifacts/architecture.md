@@ -10,13 +10,13 @@ webUiExtension:
     - ux-design-specification.md
 inputDocuments:
   - prd.md
-  - product-brief-spec-db-2026-02-17.md
-  - research-technical-spec-db.md
-  - brainstorming-spec-db.md
+  - product-brief-lattice-2026-02-17.md
+  - research-technical-lattice.md
+  - brainstorming-lattice.md
   - docs/project-context.md
   - ux-design-specification.md
 workflowType: 'architecture'
-project_name: 'spec-db'
+project_name: 'lattice'
 user_name: 'Jack'
 date: '2026-02-23'
 ---
@@ -103,8 +103,8 @@ Planned versions from project-context.md have drifted. Updated locked versions:
 **Initialization Command:**
 
 ```bash
-mkdir spec-db && cd spec-db
-cargo init --name spec-db
+mkdir lattice && cd lattice
+cargo init --name lattice
 mkdir -p crates/{spec-db-core,spec-db-causal}
 cargo new --lib crates/spec-db-core
 cargo new --lib crates/spec-db-causal
@@ -128,7 +128,7 @@ cargo new --lib crates/spec-db-causal
 
 **Code Organization:**
 ```
-spec-db/
+lattice/
 ├── Cargo.toml              # Workspace root + binary crate
 ├── Cargo.lock
 ├── src/
@@ -137,7 +137,7 @@ spec-db/
 │   ├── spec-db-core/       # Shared types: SpecId, SpecDoc, CausalEdge
 │   └── spec-db-causal/     # DeepCausality + Fjall integration
 ├── specs/                  # Example spec files (shipped via init)
-├── .spec-db/               # Runtime config
+├── .lattice/               # Runtime config
 ├── rustfmt.toml
 ├── clippy.toml
 └── .github/workflows/ci.yml
@@ -218,7 +218,7 @@ spec-db/
 
 **Streamable-HTTP Auth:**
 - Bearer token authentication when HTTP transport is enabled
-- Token configured in `.spec-db/config.yaml` under `http.auth_token`
+- Token configured in `.lattice/config.yaml` under `http.auth_token`
 - No auth required for stdio transport (default, local-only)
 - Decision rationale: Simplest viable option for an optional transport on a local dev tool
 
@@ -256,7 +256,7 @@ SpecDbError (thiserror)
 
 **MCP Transport:**
 - Default: stdio (zero network configuration, local-only)
-- Optional: streamable-http (configured in `.spec-db/config.yaml`)
+- Optional: streamable-http (configured in `.lattice/config.yaml`)
 - Both use the same `ServerHandler` implementation — transport is a wiring concern
 
 ### Infrastructure & Deployment
@@ -269,15 +269,15 @@ SpecDbError (thiserror)
 - Key spans: search queries, graph traversals, sync operations, MCP tool calls, consistency checks
 
 **Binary Distribution:**
-- MVP: `cargo install spec-db` — single command, no platform-specific packaging
+- MVP: `cargo install lattice` — single command, no platform-specific packaging
 - Post-MVP: GitHub Releases with pre-built binaries via `cargo-dist` for Linux/macOS/Windows
 - Cross-platform: No platform-specific code — pure Rust, no FFI
 
 **Configuration:**
-- Format: YAML (`.spec-db/config.yaml`) as specified in PRD
+- Format: YAML (`.lattice/config.yaml`) as specified in PRD
 - Parsed via `serde_yml`
 - Sensible defaults — config file is optional for basic usage
-- `spec-db init` generates config with documented defaults
+- `lattice init` generates config with documented defaults
 
 ### Decision Impact Analysis
 
@@ -390,7 +390,7 @@ SpecDbError (thiserror)
 ### Complete Project Directory Structure
 
 ```
-spec-db/
+lattice/
 ├── Cargo.toml                        # Workspace root + binary crate
 ├── Cargo.lock
 ├── LICENSE
@@ -469,7 +469,7 @@ spec-db/
 │       └── tests/
 │           └── integration.rs
 │
-├── specs/                            # Example specs shipped via `spec-db init`
+├── specs/                            # Example specs shipped via `lattice init`
 │   └── example/
 │       ├── hello-world.md
 │       └── getting-started.md
@@ -478,7 +478,7 @@ spec-db/
 │   ├── tantivy/
 │   └── fjall/
 │
-├── .spec-db/
+├── .lattice/
 │   └── config.yaml
 │
 └── docs/
@@ -489,7 +489,7 @@ spec-db/
 
 **Crate Dependency Graph (unidirectional — no cycles):**
 ```
-spec-db (binary)
+lattice (binary)
 ├── mcp            → tools/resources, ServerHandler
 │   ├── router     → query classification, result composition
 │   │   ├── search → Tantivy search execution
@@ -518,7 +518,7 @@ spec-db (binary)
 | Tantivy index (`data/tantivy/`) | `search` crate | Only `search` reads/writes |
 | Fjall database (`data/fjall/`) | `causal` crate | Only `causal` reads/writes |
 | Git repository | `ingest` crate | Only `ingest` reads via git2 |
-| Config (`.spec-db/config.yaml`) | Root binary | Parsed once at startup, passed as config struct |
+| Config (`.lattice/config.yaml`) | Root binary | Parsed once at startup, passed as config struct |
 
 **Async Boundary:**
 
@@ -689,13 +689,13 @@ _This section extends the core architecture with a web-based causal graph UI. Al
 
 ### Context & Scope
 
-The UX design specification (`ux-design-specification.md`) defines a Svelte Flow-based graph editor served directly by the spec-db binary. This architecture section covers:
+The UX design specification (`ux-design-specification.md`) defines a Svelte Flow-based graph editor served directly by the lattice binary. This architecture section covers:
 1. New `spec-db-web` Rust crate (REST API + static asset serving)
 2. Frontend build pipeline (Svelte → Vite → static assets → embedded in binary)
 3. Git write-back pipeline (REST API → modify YAML frontmatter → git commit)
 4. Integration with existing crate boundaries
 
-**What this is NOT:** A separate deployment. The web UI is embedded in the same `spec-db` binary. `spec-db serve` starts both MCP (stdio) and the web UI (HTTP) from a single process.
+**What this is NOT:** A separate deployment. The web UI is embedded in the same `lattice` binary. `lattice serve` starts both MCP (stdio) and the web UI (HTTP) from a single process.
 
 ### New Technology Decisions
 
@@ -816,7 +816,7 @@ User action → REST API → writeback::apply_edit()
   3. Modify target field(s) in frontmatter
   4. Preserve markdown body unchanged
   5. Write modified file back to disk
-  6. git add + git commit (via git2) with message: "spec-db: update {spec_id} ({field})"
+  6. git add + git commit (via git2) with message: "lattice: update {spec_id} ({field})"
   7. Store commit SHA in UndoState (5-second window)
   8. Trigger incremental sync (update Tantivy + Fjall indexes)
   9. Return success response with file path
@@ -849,7 +849,7 @@ web-ui/        (Svelte source)
   → npm run build
   → web-ui/build/    (static HTML/JS/CSS)
   → rust-embed compiles into binary
-  → spec-db serve serves from memory
+  → lattice serve serves from memory
 ```
 
 **Asset serving strategy:**
@@ -898,7 +898,7 @@ web-ui/                              # NOT inside crates/ — separate npm proje
 ### Updated Project Directory Structure
 
 ```
-spec-db/
+lattice/
 ├── Cargo.toml                        # Workspace root + binary crate
 ├── Cargo.lock
 ├── src/
@@ -928,14 +928,14 @@ spec-db/
 │   └── build/                        # Vite output (gitignored)
 ├── specs/
 ├── data/
-├── .spec-db/
+├── .lattice/
 └── docs/
 ```
 
 ### Updated Crate Dependency Graph
 
 ```
-spec-db (binary)
+lattice (binary)
 ├── mcp            → MCP server (stdio)
 │   ├── router     → query classification
 │   │   ├── search
@@ -1009,7 +1009,7 @@ async fn run_serve(cwd: &Path, cfg: &SpecDbConfig) -> anyhow::Result<()> {
 
 ### Configuration Extension
 
-New section in `.spec-db/config.yaml`:
+New section in `.lattice/config.yaml`:
 
 ```yaml
 web:

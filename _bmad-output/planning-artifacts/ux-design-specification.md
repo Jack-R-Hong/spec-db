@@ -3,11 +3,11 @@ stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 completedAt: '2026-02-23T00:00:00Z'
 inputDocuments:
   - prd.md
-  - product-brief-spec-db-2026-02-17.md
+  - product-brief-lattice-2026-02-17.md
   - docs/project-context.md
 ---
 
-# UX Design Specification spec-db
+# UX Design Specification lattice
 
 **Author:** Jack
 **Date:** 2026-02-23
@@ -18,7 +18,7 @@ inputDocuments:
 
 ### Project Vision
 
-spec-db is a causal specification database for AI agent teams (100% Rust, CLI + MCP). This UX design defines a **web-based causal graph UI** served directly by spec-db itself. The interface lets spec authors and architects **visually explore the causal graph**, inspect node details, make simple edits to specs and relationships, trigger rebuilds, and write changes back to git.
+lattice is a causal specification database for AI agent teams (100% Rust, CLI + MCP). This UX design defines a **web-based causal graph UI** served directly by lattice itself. The interface lets spec authors and architects **visually explore the causal graph**, inspect node details, make simple edits to specs and relationships, trigger rebuilds, and write changes back to git.
 
 This is not a full-featured editor — it's a **graph-first exploration and light-editing tool** that makes the causal knowledge graph tangible and actionable for humans.
 
@@ -37,7 +37,7 @@ This is not a full-featured editor — it's a **graph-first exploration and ligh
 1. **Graph visualization at scale** — Hundreds of nodes with causal edges. Must remain readable and navigable without becoming a hairball. Layout algorithm selection is critical.
 2. **Git write-back complexity** — Edits in the UI must modify markdown files and reflect in git. This creates a round-trip: UI → modify file → git commit → re-sync indexes. Must feel instant despite the pipeline.
 3. **Simplicity vs. power** — Users are technical but the UI should not feel like a database admin panel. Graph exploration should be intuitive; editing should be minimal and focused (frontmatter fields, edge add/remove).
-4. **Serving from Rust** — The web UI is served by the spec-db binary itself. This constrains the frontend stack (likely static assets bundled into the binary, no separate frontend deployment).
+4. **Serving from Rust** — The web UI is served by the lattice binary itself. This constrains the frontend stack (likely static assets bundled into the binary, no separate frontend deployment).
 
 ### Design Opportunities
 
@@ -63,10 +63,10 @@ The **primary action is exploration** — most sessions are read-only graph brow
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Platform | Web (desktop browser only) | Developer workstation context; served by spec-db binary |
-| Serving | Static assets embedded in Rust binary | Zero separate deployment; `spec-db serve` serves both MCP and web UI |
+| Platform | Web (desktop browser only) | Developer workstation context; served by lattice binary |
+| Serving | Static assets embedded in Rust binary | Zero separate deployment; `lattice serve` serves both MCP and web UI |
 | Input | Mouse + keyboard | No touch; developers use mouse for graph, keyboard for search/shortcuts |
-| Offline | Not required | spec-db runs locally — "offline" by design (localhost) |
+| Offline | Not required | lattice runs locally — "offline" by design (localhost) |
 | Frontend stack | Vanilla JS + lightweight graph library | Minimize build complexity; bundled as static assets into the binary |
 
 ### Effortless Interactions
@@ -150,17 +150,17 @@ The **primary action is exploration** — most sessions are read-only graph brow
 **1. Node-RED (Flow Editor)**
 - **What it does well:** Drag-and-drop node connections directly on canvas. Wires between nodes are first-class interactive elements — click to create, drag to reroute, click to delete. Double-click a node to edit properties inline.
 - **Key UX pattern:** Canvas-first editing. The graph IS the editor. No separate "edit mode" — you're always editing.
-- **Relevance to spec-db:** The `depends_on` edge creation/deletion should feel like wiring nodes in Node-RED — drag from one node to another to create a causal link.
+- **Relevance to lattice:** The `depends_on` edge creation/deletion should feel like wiring nodes in Node-RED — drag from one node to another to create a causal link.
 
 **2. Draw.io (diagrams.net)**
 - **What it does well:** Direct manipulation of both nodes and edges on canvas. Hover a node → connection points appear → drag to create edge. Select edge → delete key to remove. Double-click node label to edit inline.
 - **Key UX pattern:** Hover-reveal affordances. Connection points only appear when you hover near a node, keeping the canvas clean until you need to edit.
-- **Relevance to spec-db:** Hover-to-reveal connection handles for creating `depends_on` edges. Keeps the exploration view clean but editing is always one hover away.
+- **Relevance to lattice:** Hover-to-reveal connection handles for creating `depends_on` edges. Keeps the exploration view clean but editing is always one hover away.
 
 **3. Obsidian Graph View (for exploration baseline)**
 - **What it does well:** Force-directed graph of markdown files with relationships. Smooth zoom, pan, search-to-highlight. Clusters emerge naturally from the layout. Click node → opens the note.
 - **Key UX pattern:** Read-first graph with progressive detail. The default experience is exploration; editing happens in context.
-- **Relevance to spec-db:** The exploration/navigation feel — pan, zoom, search-to-focus — should match Obsidian's smoothness. But we go further by enabling on-canvas editing.
+- **Relevance to lattice:** The exploration/navigation feel — pan, zoom, search-to-focus — should match Obsidian's smoothness. But we go further by enabling on-canvas editing.
 
 ### Transferable UX Patterns
 
@@ -196,7 +196,7 @@ The **primary action is exploration** — most sessions are read-only graph brow
 - Hover-reveal connection handles from draw.io — clean canvas with editing always one hover away
 - Pan/zoom/search trifecta from Obsidian — proven graph navigation
 
-**Adapt for spec-db:**
+**Adapt for lattice:**
 - Node-RED's property panel → our slide-out detail panel (frontmatter fields, not arbitrary properties)
 - Draw.io's inline label editing → limited to `title` and `tags` fields only (not free-form text on canvas)
 - Obsidian's force-directed layout → add cluster separation for disconnected specs and tag-based coloring
@@ -225,7 +225,7 @@ Svelte Flow is not just a graph library — it's the entire interaction layer. T
 | **Edge labels** | Native edge label support — can show relationship types (`depends_on`, `constrains`) |
 | **Dark mode** | Built-in `colorMode` prop with CSS variable theming |
 | **Performance** | Svelte's compile-time approach + Svelte Flow handles hundreds of nodes smoothly |
-| **MIT licensed** | No licensing concerns for embedding in spec-db |
+| **MIT licensed** | No licensing concerns for embedding in lattice |
 | **Active maintenance** | xyflow team (also maintains React Flow) — 53K weekly installs, regular updates |
 
 ### Implementation Approach
@@ -237,7 +237,7 @@ Svelte Flow is not just a graph library — it's the entire interaction layer. T
 | Styling | **CSS custom properties** + Svelte Flow's built-in theming |
 | Build | **Vite** (via SvelteKit) → produces static assets |
 | Embedding | Built static assets bundled into Rust binary via `include_dir` or similar |
-| API communication | **REST/JSON** endpoints served by spec-db's Rust HTTP server (same port as streamable-http MCP) |
+| API communication | **REST/JSON** endpoints served by lattice's Rust HTTP server (same port as streamable-http MCP) |
 
 **Build pipeline:**
 ```
@@ -259,7 +259,7 @@ Svelte source → Vite build → static HTML/JS/CSS → embedded in Rust binary 
 - Delete handle on hover
 - Reconnect anchors for drag-to-reroute
 
-**Theme:** Dark mode default via Svelte Flow's `colorMode="dark"`, with CSS custom properties for spec-db-specific colors (node types, impact highlight, disconnected cluster dimming).
+**Theme:** Dark mode default via Svelte Flow's `colorMode="dark"`, with CSS custom properties for lattice-specific colors (node types, impact highlight, disconnected cluster dimming).
 
 ## Defining Experience
 
@@ -271,7 +271,7 @@ Svelte source → Vite build → static HTML/JS/CSS → embedded in Rust binary 
 
 ### User Mental Model
 
-Developers already think in dependency graphs (Cargo.toml, package.json, import trees). spec-db's graph UI maps directly to this mental model, but at the specification level rather than code level. The key insight: developers understand directed edges intuitively — they just lack a tool that makes spec-level causal edges visible and editable.
+Developers already think in dependency graphs (Cargo.toml, package.json, import trees). lattice's graph UI maps directly to this mental model, but at the specification level rather than code level. The key insight: developers understand directed edges intuitively — they just lack a tool that makes spec-level causal edges visible and editable.
 
 **Current workaround:** Read YAML frontmatter `depends_on` fields across multiple files, mentally reconstruct the chain. Error-prone, invisible, no overview.
 
@@ -453,7 +453,7 @@ Three directions evaluated via interactive HTML mockup (`ux-design-directions.ht
 
 ```mermaid
 flowchart TD
-    A[Open spec-db web UI] --> B[Graph renders with all spec nodes]
+    A[Open lattice web UI] --> B[Graph renders with all spec nodes]
     B --> C{Graph readable?}
     C -->|Yes| D[Pan/zoom to explore clusters]
     C -->|No, too many nodes| E[Use search bar to filter]
@@ -575,7 +575,7 @@ flowchart TD
     D --> F[Clicks Rebuild button]
     E --> F
     F --> G[Button shows spinner/progress]
-    G --> H[REST API calls spec-db sync --full]
+    G --> H[REST API calls lattice sync --full]
     H --> I{Rebuild result}
     I -->|Success| J[Toast: 'Rebuilt. 47 specs, 23 edges.']
     I -->|Error| K[Toast: 'Rebuild failed: error' in red]
@@ -662,7 +662,7 @@ flowchart TD
 | Aspect | Specification |
 |--------|--------------|
 | **Purpose** | Persistent top bar with search, status, and admin actions |
-| **Anatomy** | Logo ("spec-db") → Search input → Spacer → Sync status (monospace) → Rebuild button |
+| **Anatomy** | Logo ("lattice") → Search input → Spacer → Sync status (monospace) → Rebuild button |
 | **Height** | 40px fixed |
 | **Search** | `Ctrl+K` shortcut to focus, real-time filter as user types |
 | **Status display** | `{count} specs · {SHA:7} · {time} ago` — updates after rebuild |
@@ -776,7 +776,7 @@ Every mouse/keyboard action has ONE consistent meaning across the entire applica
 | State | Visual Treatment | User Action |
 |-------|-----------------|-------------|
 | **Loading (graph)** | Canvas with dot background + centered spinner + "Loading graph..." | Wait (< 1 second) |
-| **Empty (no specs)** | Canvas with centered message: "No specs found. Run `spec-db init` to get started." | Follow CLI instructions |
+| **Empty (no specs)** | Canvas with centered message: "No specs found. Run `lattice init` to get started." | Follow CLI instructions |
 | **Error (graph load)** | Canvas with centered error: "Failed to load graph: {error}. [Retry]" | Click Retry |
 | **Disconnected nodes** | Nodes at 40% opacity, visually grouped away from connected clusters | Click to inspect; add edges to connect |
 | **Rebuilding** | Header rebuild button shows spinner. Graph dims slightly (opacity 0.8). | Wait (< 5 seconds) |
@@ -814,7 +814,7 @@ Every mouse/keyboard action has ONE consistent meaning across the entire applica
 
 | Breakpoint | Layout Adjustment |
 |-----------|-------------------|
-| < 1024px | Show warning: "spec-db requires a desktop browser (1024px+)" |
+| < 1024px | Show warning: "lattice requires a desktop browser (1024px+)" |
 | 1024px – 1440px | Standard layout: 40px header + canvas + 360px panel |
 | > 1440px | Extra canvas space; consider wider nodes or looser graph layout |
 

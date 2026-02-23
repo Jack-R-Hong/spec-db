@@ -6,28 +6,28 @@ Status: review
 
 As a spec author,
 I want CLI commands to manage the MCP server, trigger syncs, rebuild indexes, and check system health,
-so that I can operate spec-db without needing an AI agent.
+so that I can operate lattice without needing an AI agent.
 
 ## Acceptance Criteria (BDD)
 
-**Given** a configured spec-db project
-**When** I run `spec-db serve`
-**Then** the MCP server starts from `.spec-db/config.yaml` (FR34)
+**Given** a configured lattice project
+**When** I run `lattice serve`
+**Then** the MCP server starts from `.lattice/config.yaml` (FR34)
 **And** an initial sync runs automatically if no index exists
 **And** a cross-store consistency check runs before serving
 
-**Given** a running spec-db project
-**When** I run `spec-db sync`
+**Given** a running lattice project
+**When** I run `lattice sync`
 **Then** an incremental sync is triggered (FR35)
-**And** when I run `spec-db sync --full`, a full rebuild is triggered instead (FR35)
+**And** when I run `lattice sync --full`, a full rebuild is triggered instead (FR35)
 
-**Given** a spec-db project with existing indexes
-**When** I run `spec-db rebuild`
+**Given** a lattice project with existing indexes
+**When** I run `lattice rebuild`
 **Then** a destructive full index rebuild executes (FR36)
 **And** both stores are rebuilt from git (idempotent)
 
-**Given** a spec-db project
-**When** I run `spec-db status`
+**Given** a lattice project
+**When** I run `lattice status`
 **Then** I see document count, last sync commit SHA, and consistency check result (FR37)
 **And** the output clearly indicates whether stores are consistent or drifted
 
@@ -42,7 +42,7 @@ so that I can operate spec-db without needing an AI agent.
   - [x] Add help text/examples and `--full` flag on `sync`
   - [x] Parse once and dispatch through `run_command(cli.command)`
 - [x] Implement startup/config wiring
-  - [x] Add `fn load_project_config() -> anyhow::Result<SpecDbConfig>` from `.spec-db/config.yaml`
+  - [x] Add `fn load_project_config() -> anyhow::Result<SpecDbConfig>` from `.lattice/config.yaml`
   - [x] Build shared app services from config (search, causal, ingest, router, mcp)
   - [x] Keep typed errors in crates; map to `anyhow::Error` at binary boundary
 - [x] Implement `serve` flow
@@ -51,8 +51,8 @@ so that I can operate spec-db without needing an AI agent.
   - [x] Run consistency check before opening MCP transport
   - [x] Start stdio MCP server always; start streamable-http only if configured
 - [x] Implement `sync` flow
-  - [x] `spec-db sync` invokes incremental sync path
-  - [x] `spec-db sync --full` invokes full rebuild path
+  - [x] `lattice sync` invokes incremental sync path
+  - [x] `lattice sync --full` invokes full rebuild path
   - [x] Print Admin F1 result with status/message/details summary
 - [x] Implement `rebuild` flow
   - [x] Confirm destructive rebuild execution path (full index reset + reindex from git)

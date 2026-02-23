@@ -14,9 +14,9 @@ stepsCompleted:
   - step-12-complete
 completedAt: '2026-02-23T00:00:00Z'
 inputDocuments:
-  - product-brief-spec-db-2026-02-17.md
-  - research-technical-spec-db.md
-  - brainstorming-spec-db.md
+  - product-brief-lattice-2026-02-17.md
+  - research-technical-lattice.md
+  - brainstorming-lattice.md
   - docs/project-context.md
 documentCounts:
   briefs: 1
@@ -31,16 +31,16 @@ classification:
 workflowType: 'prd'
 ---
 
-# Product Requirements Document - spec-db
+# Product Requirements Document - lattice
 
 **Author:** Jack
 **Date:** 2026-02-22
 
 ## Executive Summary
 
-spec-db is a causal specification database for AI agent teams. It combines full-text search (Tantivy) with causal knowledge graph reasoning (DeepCausality + Fjall) to give agents a shared, structured specification layer — enabling them to discover specs, trace architectural impact, propose changes, and maintain a complete evolution record.
+lattice is a causal specification database for AI agent teams. It combines full-text search (Tantivy) with causal knowledge graph reasoning (DeepCausality + Fjall) to give agents a shared, structured specification layer — enabling them to discover specs, trace architectural impact, propose changes, and maintain a complete evolution record.
 
-**Core Differentiator:** No existing tool combines full-text spec discovery with causal graph reasoning as a native AI agent skill. Search engines return documents; spec-db returns documents *plus their causal web*. The `trace_impact` capability ("if I change this spec, what breaks?") is a fundamentally new primitive for AI-assisted development.
+**Core Differentiator:** No existing tool combines full-text spec discovery with causal graph reasoning as a native AI agent skill. Search engines return documents; lattice returns documents *plus their causal web*. The `trace_impact` capability ("if I change this spec, what breaks?") is a fundamentally new primitive for AI-assisted development.
 
 **Two Modes of Intelligence:**
 - **Discovery Mode** ("What exists?") — Tantivy-powered full-text search with BM25 scoring, sub-10ms response
@@ -61,7 +61,7 @@ spec-db is a causal specification database for AI agent teams. It combines full-
 - First `search_specs` call returns the exact relevant spec in < 10ms — this is the adoption hook
 - `trace_impact` becomes habitual: agents check blast radius before proposing any spec modification
 - Token consumption for spec-related context drops measurably vs. file-reading/grep approaches
-- Agents prefer spec-db MCP tools over reading raw files within the first session
+- Agents prefer lattice MCP tools over reading raw files within the first session
 
 **Spec Author (Wei)**
 - Write-to-queryable latency < 30 seconds (git commit + `sync`)
@@ -71,14 +71,14 @@ spec-db is a causal specification database for AI agent teams. It combines full-
 **Architect (Mei)**
 - `graph://overview` provides accurate, up-to-date view of spec relationships
 - Breaking changes caught by `trace_impact` before reaching production
-- `spec-db rebuild` from git produces identical results — zero data lock-in anxiety
+- `lattice rebuild` from git produces identical results — zero data lock-in anxiety
 
 ### Business Success
 
 | Milestone | Timeframe | Indicator |
 |-----------|-----------|-----------|
 | Prove the concept | 3 months | Working MVP: search + causal reasoning + MCP + git sync with real specs |
-| Prove agent adoption | 6 months | Agent teams actively using spec-db in real workflows; ~500 GitHub stars |
+| Prove agent adoption | 6 months | Agent teams actively using lattice in real workflows; ~500 GitHub stars |
 | Prove community interest | 12 months | External contributors, sustained crate download growth |
 | Prove the standard | 18+ months | Other projects adopt spec-driven development patterns; 6,000 stars (stretch) |
 
@@ -86,18 +86,18 @@ spec-db is a causal specification database for AI agent teams. It combines full-
 
 - Search latency: < 10ms for full-text queries across 100+ specs
 - Startup time: < 1 second to load full causal graph from Fjall into memory
-- Rebuild reliability: `git clone` + `spec-db rebuild` = 100% idempotent
+- Rebuild reliability: `git clone` + `lattice rebuild` = 100% idempotent
 - Incremental sync: Changed specs re-indexed via `git diff` in < 5 seconds
 - Causal traversal: `trace_impact` correctly traverses human-curated `depends_on` chains
 - Query router: Correctly classifies intent and routes to Tantivy, DeepCausality, or both
-- MCP integration: AI agents discover and call spec-db tools without friction
+- MCP integration: AI agents discover and call lattice tools without friction
 - Observability: OpenTelemetry traces and metrics emitted for all key operations
 
 ### Measurable Outcomes
 
 - **Aha! moment:** Agent's first `search_specs` returns the right spec instantly instead of grepping — the hook that drives repeat usage
 - **Validation moment:** First `trace_impact` reveals a hidden dependency the agent didn't know about — proves causal reasoning value
-- **Dogfooding:** spec-db manages its own specifications during development
+- **Dogfooding:** lattice manages its own specifications during development
 
 ## Product Scope & Phased Development
 
@@ -105,7 +105,7 @@ spec-db is a causal specification database for AI agent teams. It combines full-
 
 **Approach:** Problem-solving MVP — prove the full thesis (search + causal reasoning) ships together or not at all.
 
-**Hard Gate:** Causal reasoning ships with search or nothing ships. There is no "search-only" intermediate release. spec-db without causal reasoning is just another search tool.
+**Hard Gate:** Causal reasoning ships with search or nothing ships. There is no "search-only" intermediate release. lattice without causal reasoning is just another search tool.
 
 **Resource Reality:** Solo side project at 10-15 hours/week. 6-month target timeline. Quality bar stays high — Rust helps here.
 
@@ -143,12 +143,12 @@ spec-db is a causal specification database for AI agent teams. It combines full-
 - AI-inferred causal edges via `add_causal_link` MCP tool
 - DeepCausality CSM validation for AI-proposed edges
 - Trust scoring system (human=1.0, AI=0.x)
-- Edge export to `.spec-db/edges.yaml` for human review
+- Edge export to `.lattice/edges.yaml` for human review
 - MCP Prompts (`impact_analysis`, `spec_review`)
 
 ### Phase 3 — Ecosystem Expansion
 
-- Embeddable Rust library API (`spec-db-lib`)
+- Embeddable Rust library API (`lattice-lib`)
 - Multi-repo federation — causal graphs spanning organizational boundaries
 - CI/CD integration — spec impact checks before merge
 - IDE plugins — causal context surfaced in editor
@@ -176,7 +176,7 @@ The agent now has enough context to draft a new websocket auth spec with proper 
 
 ### Journey 3: Wei Authors His First Spec
 
-Wei has been writing specs as scattered markdown files with no structure. His team lead Mei has just deployed spec-db. Wei creates his first spec:
+Wei has been writing specs as scattered markdown files with no structure. His team lead Mei has just deployed lattice. Wei creates his first spec:
 
 ```yaml
 ---
@@ -204,11 +204,11 @@ He runs `sync(mode: "full")` — a complete rebuild from the git tree. In under 
 
 **Capabilities revealed:** `sync` full vs. incremental modes, OpenTelemetry observability, rebuild reliability, edge case in `git diff` handling, recovery path.
 
-### Journey 5: Mei Evaluates and Deploys spec-db
+### Journey 5: Mei Evaluates and Deploys lattice
 
 Mei manages a 6-person dev team with integrated AI agents. Specs are scattered across 4 directories with no relationships. Agents read entire repos to find context — slow, expensive, and they still miss dependencies.
 
-Mei evaluates spec-db. She adds it to the team's MCP config, runs `spec-db rebuild` on the existing specs directory. In seconds, the full index and causal graph are built. She calls `graph://overview` — a summary shows 47 specs, 23 causal edges (from `depends_on` frontmatter), and 3 disconnected clusters (specs with no relationships).
+Mei evaluates lattice. She adds it to the team's MCP config, runs `lattice rebuild` on the existing specs directory. In seconds, the full index and causal graph are built. She calls `graph://overview` — a summary shows 47 specs, 23 causal edges (from `depends_on` frontmatter), and 3 disconnected clusters (specs with no relationships).
 
 Those 3 disconnected clusters are a red flag. Mei reviews them — they're legacy specs that never declared dependencies. She adds `depends_on` to their frontmatter, commits, syncs. The graph now shows a connected architecture.
 
@@ -234,7 +234,7 @@ Validation strategy: Human review + AI analysis.
 - Human-curated edges (`depends_on` in frontmatter) are trust=1.0 by definition — correctness depends on the author
 - `graph://overview` exposes disconnected clusters (specs with no edges) as a signal for missing relationships
 - Post-MVP (P2): AI-inferred edges validated by DeepCausality's Causal State Machine before acceptance
-- Completeness is a human responsibility; spec-db surfaces gaps but doesn't guarantee completeness
+- Completeness is a human responsibility; lattice surfaces gaps but doesn't guarantee completeness
 
 ### Search Relevance Tuning
 
@@ -284,17 +284,17 @@ Two derived stores (Tantivy search index + Fjall/DeepCausality causal graph) mus
 No existing tool combines full-text spec discovery with causal graph reasoning for AI agents. Current developer tools offer either search (Sourcegraph, grep) or graph databases (Neo4j, Dgraph) — but none merges both into a single spec-native intelligence layer exposed as an agent skill.
 
 **2. Agent-Native Spec Intelligence (Interaction Model)**
-spec-db is designed from the ground up as an MCP server. Agents don't query spec-db like a database; they think with it. The search → reason → propose → trace workflow is a new interaction paradigm where specifications become a first-class agent capability.
+lattice is designed from the ground up as an MCP server. Agents don't query lattice like a database; they think with it. The search → reason → propose → trace workflow is a new interaction paradigm where specifications become a first-class agent capability.
 
 **3. Spec-Driven Development as a Discipline (Paradigm)**
-spec-db proposes that specifications should be structured, versioned, causally linked, and machine-queryable. This is an emerging engineering discipline with no reference implementation. spec-db aims to be that reference implementation.
+lattice proposes that specifications should be structured, versioned, causally linked, and machine-queryable. This is an emerging engineering discipline with no reference implementation. lattice aims to be that reference implementation.
 
 **4. Self-Growing Intelligence (Long-term, P2)**
 Hybrid human + AI causal edge creation means the knowledge graph compounds in value over time. Human-curated edges (trust=1.0) anchor truth; AI-inferred edges (CSM-validated, trust=0.x) expand coverage.
 
 ### Competitive Landscape
 
-| Category | Closest Tools | How spec-db Differs |
+| Category | Closest Tools | How lattice Differs |
 |----------|--------------|---------------------|
 | Code search | Sourcegraph, ripgrep | Searches *specifications*, not code — adds causal reasoning |
 | Knowledge graphs | Neo4j, Dgraph | Spec-native, git-centric, MCP-exposed — not general-purpose |
@@ -303,17 +303,17 @@ Hybrid human + AI causal edge creation means the knowledge graph compounds in va
 
 **No direct competitor exists.** Genuinely green-field category.
 
-### Innovation Validation & Risk
-
 **Validation approach:**
 - MVP ships search + causal reasoning together — validate full thesis from day one
-- Dogfooding: spec-db manages its own specs during development
+- Dogfooding: lattice manages its own specs during development
 - Agent adoption signal: Do agents call `trace_impact` before modifications?
 - Community signal: GitHub traction indicates whether the concept resonates
 
+### Innovation Validation & Risk
+
 | Innovation Risk | Fallback | Why It's Still Viable |
 |----------------|----------|----------------------|
-| Agents don't use `trace_impact` enough | Search-only spec-db | Git-centric spec search with version management and pruning is valuable standalone |
+| Agents don't use `trace_impact` enough | Search-only lattice | Git-centric spec search with version management and pruning is valuable standalone |
 | Causal graph too complex for adoption | Ship without causal layer | Tantivy search + MCP + git sync is useful on its own |
 | "Spec-driven development" doesn't resonate | Position as "spec search for agents" | Narrower framing, same technology |
 | DeepCausality integration proves difficult | Use petgraph as fallback | Simpler graph primitives; CSM validation deferred |
@@ -324,23 +324,23 @@ Hybrid human + AI causal edge creation means the knowledge graph compounds in va
 
 **Installation:**
 ```bash
-cargo install spec-db
+cargo install lattice
 ```
 
 **Initialization:**
 ```bash
-spec-db init
+lattice init
 ```
 - Scaffolds `specs/` directory with example spec files
-- Creates `.spec-db/config.yaml` with sensible defaults
+- Creates `.lattice/config.yaml` with sensible defaults
 - Generates starter specs demonstrating frontmatter format, `depends_on` relationships, and tag conventions
 - Outputs next-steps instructions (add to MCP config, write first spec, run sync)
 
 **Running:**
 ```bash
-spec-db serve
+lattice serve
 ```
-- Reads `.spec-db/config.yaml` for configuration
+- Reads `.lattice/config.yaml` for configuration
 - Starts MCP server (stdio by default, streamable-http optional)
 - Runs initial `sync` on first startup
 - Performs cross-store consistency check before serving
@@ -349,8 +349,8 @@ spec-db serve
 ```json
 {
   "mcpServers": {
-    "spec-db": {
-      "command": "spec-db",
+    "lattice": {
+      "command": "lattice",
       "args": ["serve"]
     }
   }
@@ -383,16 +383,16 @@ spec-db serve
 
 | Command | Description |
 |---------|-------------|
-| `spec-db init` | Scaffold project structure with example specs and config |
-| `spec-db serve` | Start MCP server from config |
-| `spec-db sync [--full]` | Manual sync trigger (full rebuild or incremental) |
-| `spec-db rebuild` | Full index rebuild from git (destructive, idempotent) |
-| `spec-db status` | Show index health: doc count, last sync commit, consistency check |
+| `lattice init` | Scaffold project structure with example specs and config |
+| `lattice serve` | Start MCP server from config |
+| `lattice sync [--full]` | Manual sync trigger (full rebuild or incremental) |
+| `lattice rebuild` | Full index rebuild from git (destructive, idempotent) |
+| `lattice status` | Show index health: doc count, last sync commit, consistency check |
 
 ### Documentation Strategy (MVP)
 
 - **README.md** — Installation, quick start, MCP config, spec format reference, CLI commands
-- **Example specs** — Shipped via `spec-db init`, demonstrating frontmatter conventions
+- **Example specs** — Shipped via `lattice init`, demonstrating frontmatter conventions
 - **Inline `--help`** — Each CLI command has comprehensive help text
 - **Post-MVP:** rustdoc for library API, mdbook for guides
 
@@ -400,7 +400,7 @@ spec-db serve
 
 - **Single binary** — `cargo install` produces one binary with all dependencies statically linked
 - **Zero external services** — No databases, no Docker, no cloud accounts
-- **Config-driven** — `.spec-db/config.yaml` controls all behavior
+- **Config-driven** — `.lattice/config.yaml` controls all behavior
 - **Graceful first-run** — First `serve` triggers automatic full sync if no index exists
 - **Cross-platform** — Linux, macOS, Windows without platform-specific code
 
@@ -420,8 +420,8 @@ spec-db serve
 | Risk | Mitigation |
 |------|------------|
 | "Spec-driven development" doesn't resonate | Dogfood immediately — if it's useful for you, it's useful for others |
-| No community adoption | Focus on README quality, `spec-db init` experience, one compelling demo |
-| Agents don't adopt spec-db tools | Test with Claude Code / OpenCode during development continuously |
+| No community adoption | Focus on README quality, `lattice init` experience, one compelling demo |
+| Agents don't adopt lattice tools | Test with Claude Code / OpenCode during development continuously |
 
 ### Resource Risks
 
@@ -477,7 +477,7 @@ spec-db serve
 
 - **FR26:** The system exposes all capabilities as MCP tools over stdio transport
 - **FR27:** The system optionally exposes MCP tools over streamable-http transport
-- **FR28:** Agents can discover available spec-db tools through MCP protocol
+- **FR28:** Agents can discover available lattice tools through MCP protocol
 - **FR29:** Agents can read individual spec content via `spec://{id}` resource
 - **FR30:** Agents can read causal graph summary statistics via `graph://overview` resource
 - **FR31:** Agents can read a specific node with all edges via `graph://node/{id}` resource
@@ -485,12 +485,12 @@ spec-db serve
 
 ### System Administration (CLI)
 
-- **FR33:** Users can initialize a new spec-db project with scaffolded directory structure and example specs
+- **FR33:** Users can initialize a new lattice project with scaffolded directory structure and example specs
 - **FR34:** Users can start the MCP server from a configuration file
 - **FR35:** Users can manually trigger sync (full or incremental) via CLI
 - **FR36:** Users can perform a destructive full index rebuild via CLI
 - **FR37:** Users can view index health status (document count, last sync commit, consistency check result)
-- **FR38:** The system reads all configuration from `.spec-db/config.yaml`
+- **FR38:** The system reads all configuration from `.lattice/config.yaml`
 
 ### Data Integrity
 
@@ -525,7 +525,7 @@ spec-db serve
 
 ### Reliability
 
-- **Rebuild idempotency:** `git clone` + `spec-db rebuild` produces bit-identical indexes every time
+- **Rebuild idempotency:** `git clone` + `lattice rebuild` produces bit-identical indexes every time
 - **Crash recovery:** Fjall's LSM-tree provides durability — no data loss on unexpected shutdown
 - **Zero data lock-in:** All state derived from git. Deleting `data/` and rebuilding loses nothing
 - **Graceful degradation:** If causal graph fails to load, search-only mode with clear warning

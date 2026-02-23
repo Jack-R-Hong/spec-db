@@ -1,10 +1,7 @@
 use std::process::Command;
 
 fn binary_path() -> String {
-    if let Ok(path) = std::env::var("CARGO_BIN_EXE_spec-db") {
-        return path;
-    }
-    if let Ok(path) = std::env::var("CARGO_BIN_EXE_spec_db") {
+    if let Ok(path) = std::env::var("CARGO_BIN_EXE_lattice") {
         return path;
     }
 
@@ -13,7 +10,7 @@ fn binary_path() -> String {
     if path.ends_with("deps") {
         path.pop();
     }
-    path.join("spec-db").to_string_lossy().into_owned()
+    path.join("lattice").to_string_lossy().into_owned()
 }
 
 #[test]
@@ -24,12 +21,12 @@ fn init_creates_structure() {
     assert!(output.status.success());
 
     let stdout = String::from_utf8(output.stdout).unwrap();
-    assert!(stdout.contains("Initialized spec-db project:"));
-    assert!(stdout.contains("spec-db sync"));
-    assert!(stdout.contains("spec-db serve"));
-    assert!(stdout.contains("spec-db status"));
+    assert!(stdout.contains("Initialized lattice project:"));
+    assert!(stdout.contains("lattice sync"));
+    assert!(stdout.contains("lattice serve"));
+    assert!(stdout.contains("lattice status"));
 
-    assert!(dir.path().join(".spec-db/config.yaml").exists());
+    assert!(dir.path().join(".lattice/config.yaml").exists());
     assert!(dir.path().join("specs/example/hello-world.md").exists());
     assert!(dir.path().join("specs/example/getting-started.md").exists());
     assert!(dir.path().join("data/tantivy").exists());
@@ -42,14 +39,14 @@ fn init_idempotent() {
     let first = Command::new(binary_path()).arg("init").current_dir(dir.path()).output().unwrap();
     assert!(first.status.success());
 
-    let config_path = dir.path().join(".spec-db/config.yaml");
+    let config_path = dir.path().join(".lattice/config.yaml");
     let before = std::fs::read_to_string(&config_path).unwrap();
 
     let second = Command::new(binary_path()).arg("init").current_dir(dir.path()).output().unwrap();
     assert!(second.status.success());
 
     let stdout = String::from_utf8(second.stdout).unwrap();
-    assert!(stdout.contains("Warning: .spec-db/config.yaml already exists."));
+    assert!(stdout.contains("Warning: .lattice/config.yaml already exists."));
 
     let after = std::fs::read_to_string(&config_path).unwrap();
     assert_eq!(before, after);

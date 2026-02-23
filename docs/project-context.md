@@ -1,10 +1,10 @@
-# Project Context: spec-db
+# Project Context: lattice
 
 **Last Updated:** 2026-02-17
 
 ---
 
-## What Is spec-db
+## What Is lattice
 
 A causal specification database for AI agents. Combines full-text search (Tantivy) with causal reasoning (DeepCausality + Fjall) to let AI agents discover specs and trace architectural impact, exposed via MCP (Model Context Protocol).
 
@@ -14,9 +14,9 @@ A causal specification database for AI agents. Combines full-text search (Tantiv
 
 ### 1. Git Is Source of Truth
 - All spec content lives as markdown files in a git repository
-- spec-db indexes are **derived** — fully rebuildable from `git clone` + `spec-db rebuild`
+- lattice indexes are **derived** — fully rebuildable from `git clone` + `lattice rebuild`
 - Runtime data (`data/tantivy/`, `data/fjall/`) is NOT in git
-- AI-inferred causal edges exported to `.spec-db/edges.yaml` in git
+- AI-inferred causal edges exported to `.lattice/edges.yaml` in git
 
 ### 2. Two Subsystems, Not Three
 - **Tantivy** = independent search index (owns its own storage)
@@ -94,9 +94,9 @@ Body content in markdown...
 
 ```
 specs/                    # git-tracked spec markdown files
-.spec-db/                 # git-tracked spec-db metadata
+.lattice/                 # git-tracked lattice metadata
   edges.yaml              # AI-inferred edges (exported for review)
-  config.yaml             # spec-db configuration
+  config.yaml             # lattice configuration
 data/                     # NOT in git — runtime data
   tantivy/                # search index (rebuildable)
   fjall/                  # causal graph persistence

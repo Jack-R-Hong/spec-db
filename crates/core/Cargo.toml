@@ -3,7 +3,7 @@ name = "spec-db-core"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
-description = "Core domain types, traits, and error hierarchy for spec-db"
+description = "Core domain types, traits, and error hierarchy for lattice"
 
 [dependencies]
 serde = { workspace = true }

@@ -26,7 +26,7 @@ storyTitle: 'Scaffold Workspace & Core Domain Types'
 
 | AC# | Criterion | Testable |
 |-----|-----------|----------|
-| AC1 | Workspace compiles with `spec-db` (binary), `spec-db-core` (lib), `spec-db-causal` (lib) | ✅ |
+| AC1 | Workspace compiles with `lattice` (binary), `spec-db-core` (lib), `spec-db-causal` (lib) | ✅ |
 | AC2 | `spec-db-core` exports `SpecId`, `SpecDoc`, `SpecNode`, `CausalEdge`, `TrustLevel` | ✅ |
 | AC3 | `SpecId` validates `spec::{segment}::{segment}` pattern, rejects invalid formats | ✅ |
 | AC4 | `spec-db-core` exports `SearchEngine`, `CausalGraph`, `SpecStore` traits | ✅ |
@@ -82,7 +82,7 @@ storyTitle: 'Scaffold Workspace & Core Domain Types'
 - **Priority**: P0 — Foundation gate
 - **Scenarios**:
   1. `cargo build --workspace` exits with code 0
-  2. Binary `spec-db` exists in target
+  2. Binary `lattice` exists in target
   3. Library crate `spec-db-core` compiles
   4. Library crate `spec-db-causal` compiles
 - **Existing coverage**: None (only CLI tests exist)

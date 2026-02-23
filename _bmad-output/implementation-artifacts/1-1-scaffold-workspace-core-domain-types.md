@@ -12,7 +12,7 @@ so that all subsequent development has a consistent, version-locked foundation.
 
 **Given** a clean checkout of the repository  
 **When** I run `cargo build --workspace`  
-**Then** the workspace compiles with `spec-db` (binary), `spec-db-core` (lib), and `spec-db-causal` (lib) crates  
+**Then** the workspace compiles with `lattice` (binary), `spec-db-core` (lib), and `spec-db-causal` (lib) crates  
 **And** `spec-db-core` exports `SpecId`, `SpecDoc`, `SpecNode`, `CausalEdge`, and `TrustLevel` types  
 **And** `SpecId` validates the `spec::{segment}::{segment}` pattern and rejects invalid formats  
 **And** `spec-db-core` exports `SearchEngine`, `CausalGraph`, and `SpecStore` traits  
@@ -26,7 +26,7 @@ so that all subsequent development has a consistent, version-locked foundation.
 
 - [x] Initialize the lean workspace skeleton and crate manifests (AC: 1)
 - [x] Create root `Cargo.toml` as both workspace root and binary package:
-  - [x] Define `[package] name = "spec-db"`, edition `2024`, rust-version `1.85` (or higher enforced by CI), and root `src/main.rs`
+  - [x] Define `[package] name = "lattice"`, edition `2024`, rust-version `1.85` (or higher enforced by CI), and root `src/main.rs`
   - [x] Define `[workspace] members = ["crates/spec-db-core", "crates/spec-db-causal"]`
   - [x] Define `[workspace.dependencies]` with explicit pins: `deep_causality = "=0.13.4"`, `fjall = "3.0"`, `thiserror = "2"`, `anyhow = "1"`, `serde = { version = "1", features = ["derive"] }`, `serde_yml = "0.0.12"`, `tracing = "0.1"`, `tokio = { version = "1.49", features = ["rt-multi-thread", "macros"] }`, `clap = { version = "4.5", features = ["derive"] }`, `git2 = "0.20.4"`, `pulldown-cmark = "0.13"`, `tantivy = "0.25.0"`, `rmcp = "=0.16.0"`, `bincode = { version = "=2.0.1", features = ["serde"] }`
   - [x] Add `[profile.release] lto = true`, `codegen-units = 1`, `strip = true`
@@ -106,7 +106,7 @@ anthropic/claude-opus-4-6
 - Story file created with full AC coverage and implementation-ready guardrails.
 - Cross-story dependencies called out for Stories 1.2-1.4.
 - Version lock section includes current library gotchas from web research.
-- Workspace scaffolded with 3 crates (spec-db binary, spec-db-core lib, spec-db-causal lib).
+- Workspace scaffolded with 3 crates (lattice binary, spec-db-core lib, spec-db-causal lib).
 - All 5 domain types implemented: SpecId (with validation), SpecDoc, SpecNode, CausalEdge, TrustLevel. Added EdgeOrigin enum for edge provenance.
 - All 3 trait interfaces implemented: SearchEngine, CausalGraph, SpecStore with typed Result returns.
 - SpecDbError enum with 6 variants using thiserror derive.

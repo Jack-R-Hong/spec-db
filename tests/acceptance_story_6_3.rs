@@ -132,7 +132,7 @@ fn ac3_graph_node_resource_returns_inbound_and_outbound_edges() {
 /// AC4: HTTP auth token enforcement is deferred; no auth-token parsing/401 path exists yet.
 #[test]
 fn ac4_http_auth_is_not_wired_in_current_scope() {
-    let core_config = include_str!("../crates/spec-db-core/src/config.rs");
+    let core_config = include_str!("../crates/core/src/config.rs");
     let main_source = include_str!("../src/main.rs");
     assert!(!core_config.contains("auth_token"));
     assert!(!main_source.contains("401"));

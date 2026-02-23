@@ -1,4 +1,4 @@
-# Brainstorming Report: spec-db
+# Brainstorming Report: lattice
 
 **Date:** 2026-02-17
 **Session:** BMAD Party Mode — Multi-Agent Collaborative Discussion
@@ -8,7 +8,7 @@
 
 ## Product Concept
 
-**spec-db** is a causal specification database designed for AI agents to rapidly find specifications and understand program architecture. It combines full-text search with causal reasoning to provide two distinct modes of intelligence:
+**lattice** is a causal specification database designed for AI agents to rapidly find specifications and understand program architecture. It combines full-text search with causal reasoning to provide two distinct modes of intelligence:
 
 - **Discovery Mode** — "What exists?" — Find specs by keyword, tag, or natural language
 - **Reasoning Mode** — "What connects?" — Trace causal relationships, dependencies, and downstream impacts
@@ -30,7 +30,7 @@ When AI agents need to find specifications or understand program architecture, c
 
 ## Core Value Proposition
 
-spec-db gives AI agents a **first-class tool** (via MCP — Model Context Protocol) to:
+lattice gives AI agents a **first-class tool** (via MCP — Model Context Protocol) to:
 
 1. **Search** specs efficiently through full-text indexing
 2. **Trace** causal chains — "if I change spec A, what breaks?"
@@ -61,14 +61,14 @@ An agent can **discover** relevant specs through search, then **reason** about t
 ### 2. Git as Source of Truth
 - Spec markdown files live in a git repository (`specs/*.md`)
 - Version history comes from git, not the database
-- spec-db is a **derived index** — can be destroyed and rebuilt from `git clone` + rebuild
+- lattice is a **derived index** — can be destroyed and rebuilt from `git clone` + rebuild
 - Changes tracked via git commits, enabling PR-based review workflows
 
 ### 3. Hybrid Causal Edge Creation
 - **Human-curated edges:** `depends_on` in YAML frontmatter (trust=1.0)
 - **AI-inferred edges:** Added via `add_causal_link` MCP tool (trust=0.x, CSM-validated)
 - DeepCausality's Causal State Machine (CSM) validates AI-proposed edges
-- AI-inferred edges periodically exported to `.spec-db/edges.yaml` in git for review
+- AI-inferred edges periodically exported to `.lattice/edges.yaml` in git for review
 
 ### 4. Full In-Memory Graph
 - Entire causal graph loaded from Fjall into memory at startup
@@ -118,7 +118,7 @@ An agent can **discover** relevant specs through search, then **reason** about t
 | Spec content (markdown) | **Git** | Always — `git clone` + re-index |
 | Tantivy search index | Derived from Git | Fully rebuildable |
 | Human causal edges (`depends_on`) | **Git** (frontmatter) | Re-parsed from specs |
-| AI-inferred causal edges | **Fjall** + `.spec-db/edges.yaml` | From git export |
+| AI-inferred causal edges | **Fjall** + `.lattice/edges.yaml` | From git export |
 
 ---
 
@@ -137,13 +137,13 @@ An agent can **discover** relevant specs through search, then **reason** about t
 ```
 1. Author writes spec       → specs/auth-jwt.md
 2. git add + commit          → version tracked
-3. spec-db sync()            → indexed + graphed
+3. lattice sync()            → indexed + graphed
 4. AI agent queries          → search / trace_impact
 
 ── AI-Initiated Flow ──
 5. Agent infers edge         → add_causal_link()
 6. Edge stored in Fjall      → trust=0.x
-7. Periodic export           → .spec-db/edges.yaml
+7. Periodic export           → .lattice/edges.yaml
 8. Human reviews             → git commit (promoted)
 
 ── Spec Update Flow ──
@@ -157,19 +157,19 @@ An agent can **discover** relevant specs through search, then **reason** about t
 ## Acceptance Criteria (from SM Bob)
 
 - AC-1: `specs/*.md` in git repo is the single source of truth for spec content
-- AC-2: `spec-db sync` rebuilds index from git — zero data loss
+- AC-2: `lattice sync` rebuilds index from git — zero data loss
 - AC-3: Incremental sync processes only changed files (`git diff`)
 - AC-4: `depends_on` frontmatter auto-creates causal edges on ingest
-- AC-5: AI-inferred edges exportable to git (`.spec-db/edges.yaml`)
+- AC-5: AI-inferred edges exportable to git (`.lattice/edges.yaml`)
 - AC-6: Deleting a spec from git removes it from index + graph
-- AC-7: spec-db is fully recoverable from `git clone` + `spec-db rebuild`
+- AC-7: lattice is fully recoverable from `git clone` + `lattice rebuild`
 
 ---
 
 ## Repository Structure
 
 ```
-spec-db-repo/
+lattice-repo/
 ├── specs/                      # git-tracked specs
 │   ├── auth/
 │   │   ├── jwt-validation.md
@@ -177,9 +177,9 @@ spec-db-repo/
 │   ├── api/
 │   │   └── rate-limiting.md
 │   └── ...
-├── .spec-db/                   # git-tracked metadata
+├── .lattice/                   # git-tracked metadata
 │   ├── edges.yaml              #   AI-inferred edges (exported)
-│   └── config.yaml             #   spec-db configuration
+│   └── config.yaml             #   lattice configuration
 ├── .gitignore                  # ignore runtime data
 └── data/                       # NOT in git (runtime)
     ├── tantivy/                #   search index (rebuildable)

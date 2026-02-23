@@ -127,11 +127,11 @@ impl ServerHandler for SpecDbMcpServer {
         ServerInfo {
             capabilities: ServerCapabilities::builder().enable_tools().enable_resources().build(),
             server_info: Implementation {
-                name: "spec-db".to_owned(),
+                name: "lattice".to_owned(),
                 version: "0.1.0".to_owned(),
                 ..Implementation::default()
             },
-            instructions: Some("Spec-db MCP server over stdio".to_owned()),
+            instructions: Some("Lattice MCP server over stdio".to_owned()),
             ..ServerInfo::default()
         }
     }

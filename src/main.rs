@@ -20,7 +20,7 @@ created: "2026-01-01"
 ---
 # Hello World
 
-Welcome to spec-db! This is an example specification.
+Welcome to lattice! This is an example specification.
 "#;
 
 const GETTING_STARTED_SPEC: &str = r#"---
@@ -38,7 +38,7 @@ This spec depends on the hello-world spec, demonstrating the `depends_on` relati
 "#;
 
 #[derive(Parser)]
-#[command(name = "spec-db", about = "A causal specification database for AI agents")]
+#[command(name = "lattice", about = "A causal specification database for AI agents")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -87,11 +87,11 @@ async fn run_command(command: Commands) -> anyhow::Result<()> {
 }
 
 fn run_init(cwd: &Path) -> anyhow::Result<()> {
-    let config_dir = cwd.join(".spec-db");
+    let config_dir = cwd.join(".lattice");
     let config_path = config_dir.join("config.yaml");
 
     if config_path.exists() {
-        println!("Warning: .spec-db/config.yaml already exists. Skipping initialization.");
+        println!("Warning: .lattice/config.yaml already exists. Skipping initialization.");
         return Ok(());
     }
 
@@ -107,21 +107,21 @@ fn run_init(cwd: &Path) -> anyhow::Result<()> {
     std::fs::write(cwd.join("specs/example/hello-world.md"), HELLO_WORLD_SPEC)?;
     std::fs::write(cwd.join("specs/example/getting-started.md"), GETTING_STARTED_SPEC)?;
 
-    println!("Initialized spec-db project:");
+    println!("Initialized lattice project:");
     println!("  specs/example/hello-world.md");
     println!("  specs/example/getting-started.md");
-    println!("  .spec-db/config.yaml");
+    println!("  .lattice/config.yaml");
     println!();
     println!("Next steps:");
-    println!("  spec-db sync    - Build search index and causal graph");
-    println!("  spec-db serve   - Start MCP server");
-    println!("  spec-db status  - Check project status");
+    println!("  lattice sync    - Build search index and causal graph");
+    println!("  lattice serve   - Start MCP server");
+    println!("  lattice status  - Check project status");
 
     Ok(())
 }
 
 fn load_project_config(cwd: &Path) -> anyhow::Result<SpecDbConfig> {
-    let path = cwd.join(".spec-db/config.yaml");
+    let path = cwd.join(".lattice/config.yaml");
     load_config(&path)
         .map_err(anyhow::Error::from)
         .with_context(|| format!("failed to load project config at {}", path.display()))
@@ -164,7 +164,7 @@ async fn run_serve(cwd: &Path, cfg: &SpecDbConfig) -> anyhow::Result<()> {
         actual_count
     );
     if !consistent {
-        anyhow::bail!("stores are drifted; run `spec-db rebuild` before serving");
+        anyhow::bail!("stores are drifted; run `lattice rebuild` before serving");
     }
 
     if cfg.transport.http.is_some() {

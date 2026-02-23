@@ -5,14 +5,14 @@ Status: review
 ## Story
 
 As an AI agent,
-I want to discover and call spec-db tools via MCP over stdio transport,
+I want to discover and call lattice tools via MCP over stdio transport,
 so that I can search, reason, and manage specs as a native capability.
 
 ## Acceptance Criteria (BDD)
 
-**Given** the MCP server started via `spec-db serve`
+**Given** the MCP server started via `lattice serve`
 **When** an agent connects over stdio
-**Then** all spec-db tools are discoverable via MCP protocol (FR28)
+**Then** all lattice tools are discoverable via MCP protocol (FR28)
 **And** the transport uses stdio with zero network configuration (FR26)
 
 **Given** an agent calling `search_specs(query, filters?)`

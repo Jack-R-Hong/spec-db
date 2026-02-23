@@ -1,4 +1,4 @@
-# Technical Research: spec-db Technology Stack
+# Technical Research: lattice Technology Stack
 
 **Date:** 2026-02-17
 **Source:** BMAD Party Mode discussion + library documentation research
@@ -27,7 +27,7 @@ All components are **pure Rust** — no FFI, no external services, fully embedda
 
 **Repository:** [quickwit-oss/tantivy](https://github.com/quickwit-oss/tantivy)
 **Crate:** `tantivy`
-**Role in spec-db:** Discovery layer — full-text search for specs
+**Role in lattice:** Discovery layer — full-text search for specs
 
 ### What It Is
 
@@ -46,7 +46,7 @@ Tantivy is a full-text search engine library written in Rust, inspired by Apache
 - **SIMD compression** for optimized performance
 - **In-memory or directory-based** index storage
 
-### Tantivy Schema for spec-db
+### Tantivy Schema for lattice
 
 ```rust
 let mut schema_builder = Schema::builder();
@@ -83,7 +83,7 @@ let query = query_parser.parse_query("authentication JWT")?;
 let results = searcher.search(&query, &TopDocs::with_limit(10))?;
 ```
 
-### Assessment for spec-db
+### Assessment for lattice
 
 - **Fit:** Excellent — purpose-built for this use case
 - **Scale:** Handles millions of documents; hundreds of specs is trivial
@@ -96,7 +96,7 @@ let results = searcher.search(&query, &TopDocs::with_limit(10))?;
 
 **Repository:** [fjall-rs/fjall](https://github.com/fjall-rs/fjall)
 **Crate:** `fjall`
-**Role in spec-db:** Persistence backend for DeepCausality causal graph
+**Role in lattice:** Persistence backend for DeepCausality causal graph
 
 ### What It Is
 
@@ -114,7 +114,7 @@ Fjall is a log-structured, embeddable key-value storage engine written in Rust. 
 - **Key-value separation** for large blobs
 - **Automatic background maintenance**
 
-### Keyspace Design for spec-db
+### Keyspace Design for lattice
 
 ```rust
 let db = Database::builder("./data/fjall").open()?;
@@ -142,7 +142,7 @@ batch.insert(&edges, "spec::auth::jwt->spec::auth::token", serialized_edge);
 batch.commit()?;
 ```
 
-### Assessment for spec-db
+### Assessment for lattice
 
 - **Fit:** Excellent — lightweight embedded KV perfect for graph persistence
 - **Scale:** Handles far more than hundreds of nodes; this is well within comfort zone
@@ -155,7 +155,7 @@ batch.commit()?;
 
 **Repository:** [deepcausality/deep_causality.rs](https://github.com/deepcausality/deep_causality.rs)
 **Crate:** `deep_causality`
-**Role in spec-db:** In-memory causal graph for reasoning about spec relationships
+**Role in lattice:** In-memory causal graph for reasoning about spec relationships
 
 ### What It Is
 
@@ -186,7 +186,7 @@ DeepCausality is a hyper-geometric computational causality library that enables 
 - `deep_causality_uncertain` — uncertainty modeling
 - `ultragraph` — underlying graph engine
 
-### Use in spec-db
+### Use in lattice
 
 - **Nodes:** Specs, code modules, architecture decisions, interfaces
 - **Edges:** Causal relationships (depends_on, constrains, implements, breaks)
@@ -194,7 +194,7 @@ DeepCausality is a hyper-geometric computational causality library that enables 
 - **Graph queries:** "What is causally affected if spec X changes?" → traverse downstream
 - **Lifecycle:** Full graph loaded from Fjall at startup, persisted back on write/shutdown
 
-### Assessment for spec-db
+### Assessment for lattice
 
 - **Fit:** Excellent for the reasoning layer — causal traversal is the core differentiator
 - **Scale:** Hundreds of nodes with causal edges is well within capacity
@@ -207,7 +207,7 @@ DeepCausality is a hyper-geometric computational causality library that enables 
 
 **Repository:** [modelcontextprotocol/rust-sdk](https://github.com/modelcontextprotocol/rust-sdk)
 **Crate:** `rmcp`
-**Role in spec-db:** MCP server for AI agent communication
+**Role in lattice:** MCP server for AI agent communication
 
 ### What It Is
 
@@ -244,12 +244,12 @@ fn trace_impact(
 }
 ```
 
-### Assessment for spec-db
+### Assessment for lattice
 
 - **Fit:** Perfect — MCP is the standard for AI agent tool interfaces
 - **Scale:** Designed for production use
 - **Integration:** Tokio-based, clean macro system, official SDK
-- **Ecosystem:** Any MCP-compatible AI agent can use spec-db immediately
+- **Ecosystem:** Any MCP-compatible AI agent can use lattice immediately
 
 ---
 
@@ -273,17 +273,17 @@ fn trace_impact(
 ## Crate Structure (Target Architecture)
 
 ```
-spec-db/
+lattice/
 ├── Cargo.toml                    # workspace
 ├── crates/
 │   ├── spec-db-core/             # Shared types (SpecId, SpecDoc, CausalEdge, TrustLevel)
-│   ├── spec-db-store/            # Fjall persistence (GraphStore: save/load graph + specs)
+│   ├── lattice-store/            # Fjall persistence (GraphStore: save/load graph + specs)
 │   ├── spec-db-search/           # Tantivy indexing (SpecIndex: index markdown, query)
 │   ├── spec-db-causal/           # DeepCausality engine (CausalEngine: in-memory graph ops)
 │   ├── spec-db-ingest/           # Markdown parsing + git sync + ingestion pipeline
 │   ├── spec-db-router/           # Query classification + orchestration (intent → fan-out → compose)
 │   ├── spec-db-mcp/              # MCP server (rmcp) (SpecDbServer + #[tool] handlers)
-│   └── spec-db-lib/              # Public Rust library API (SpecDb facade)
+│   └── lattice-lib/              # Public Rust library API (SpecDb facade)
 ```
 
 ### MVP Approach (from Barry — Quick Flow)
@@ -292,7 +292,7 @@ Start with minimal crate split for speed, then decompose:
 
 ```toml
 [package]
-name = "spec-db"
+name = "lattice"
 
 [dependencies]
 rmcp = { version = "0.8", features = ["server", "macros", "stdio"] }
@@ -312,7 +312,7 @@ tokio = { version = "1", features = ["full"] }
 
 ```
 ┌─────────────────────────────────────────────────┐
-│              spec-db                              │
+│              lattice                              │
 │                                                   │
 │  ┌────────────┐    ┌──────────────────────────┐ │
 │  │  Tantivy    │    │    DeepCausality          │ │

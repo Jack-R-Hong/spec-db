@@ -3,10 +3,7 @@
 use std::process::Command;
 
 fn _binary_path() -> String {
-    if let Ok(path) = std::env::var("CARGO_BIN_EXE_spec-db") {
-        return path;
-    }
-    if let Ok(path) = std::env::var("CARGO_BIN_EXE_spec_db") {
+    if let Ok(path) = std::env::var("CARGO_BIN_EXE_lattice") {
         return path;
     }
 
@@ -15,7 +12,7 @@ fn _binary_path() -> String {
     if path.ends_with("deps") {
         path.pop();
     }
-    path.join("spec-db").to_string_lossy().into_owned()
+    path.join("lattice").to_string_lossy().into_owned()
 }
 
 /// AC1: `serve` flow includes initial sync + consistency check preflight before transport startup.
@@ -25,7 +22,7 @@ fn ac1_serve_flow_contains_sync_and_consistency_preflight() {
     assert!(source.contains("if store.last_sync_sha()?.is_none()"));
     assert!(source.contains("initial sync completed:"));
     assert!(source.contains("consistency check:"));
-    assert!(source.contains("stores are drifted; run `spec-db rebuild` before serving"));
+    assert!(source.contains("stores are drifted; run `lattice rebuild` before serving"));
 }
 
 /// AC2: `sync` and `sync --full` subcommands parse and execute distinct modes.

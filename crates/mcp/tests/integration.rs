@@ -47,7 +47,7 @@ fn server_info_contains_name_and_capabilities() {
         PathBuf::from("data/fjall"),
     );
     let info = server.get_info();
-    assert_eq!(info.server_info.name, "spec-db");
+    assert_eq!(info.server_info.name, "lattice");
     assert_eq!(info.server_info.version, "0.1.0");
     assert!(info.capabilities.tools.is_some());
     assert!(info.capabilities.resources.is_some());

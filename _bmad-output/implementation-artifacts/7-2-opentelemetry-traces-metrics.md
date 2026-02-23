@@ -10,7 +10,7 @@ so that I can monitor performance, diagnose issues, and track system health.
 
 ## Acceptance Criteria (BDD)
 
-**Given** OpenTelemetry export configured in `.spec-db/config.yaml`
+**Given** OpenTelemetry export configured in `.lattice/config.yaml`
 **When** a search query executes
 **Then** a trace span `spec_db.search.query` is emitted with query text and result count (FR44)
 **And** a metric `spec_db.search.latency_ms` is recorded (FR45)
@@ -45,7 +45,7 @@ so that I can monitor performance, diagnose issues, and track system health.
 ## Tasks / Subtasks
 
 - [x] Extend config model for opt-in telemetry in `crates/core/src/types.rs` (or config struct module) and parsing in startup code.
-  - [x] Add `TelemetryConfig` with explicit `enabled`/endpoint/protocol fields under `.spec-db/config.yaml`.
+  - [x] Add `TelemetryConfig` with explicit `enabled`/endpoint/protocol fields under `.lattice/config.yaml`.
   - [x] Ensure default when telemetry section is absent is local-only (`enabled = false`, no exporter construction).
   - [x] Add config validation for supported protocols and endpoint presence when enabled (deferred with exporter setup).
 - [x] Implement telemetry bootstrap in `src/main.rs` (or dedicated `src/telemetry.rs` module).
@@ -96,7 +96,7 @@ so that I can monitor performance, diagnose issues, and track system health.
 ## Dev Notes
 
 - This story implements FR44-FR46 and is explicitly cross-cutting across all crates; instrumentation is not isolated to one module.
-- OTel export is strictly opt-in; no `.spec-db/config.yaml` telemetry config means no exporter, no OTLP client, no external telemetry traffic (NFR25).
+- OTel export is strictly opt-in; no `.lattice/config.yaml` telemetry config means no exporter, no OTLP client, no external telemetry traffic (NFR25).
 - Required crate versions for this implementation stream:
   - `opentelemetry = 0.31.0`,
   - `opentelemetry_sdk = 0.31.0`,

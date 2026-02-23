@@ -14,7 +14,7 @@ fn ac1_search_query_span_name_contract() {
 #[test]
 fn ac2_graph_traverse_span_name_contract() {
     assert_eq!(spec_db_core::telemetry::SPAN_GRAPH_TRAVERSE, "spec_db.graph.traverse");
-    let source = include_str!("../crates/spec-db-causal/src/engine.rs");
+    let source = include_str!("../crates/causal/src/engine.rs");
     assert!(source.contains("name = \"spec_db.graph.traverse\""));
 }
 
@@ -36,7 +36,7 @@ fn ac4_mcp_tool_call_span_name_contract() {
 /// AC5: Drift metric wiring is deferred; consistency checks currently expose spans/status only.
 #[test]
 fn ac5_drift_metric_is_deferred_in_current_scope() {
-    let source = include_str!("../crates/spec-db-core/src/telemetry.rs");
+    let source = include_str!("../crates/core/src/telemetry.rs");
     assert!(!source.contains("spec_db.consistency.drift_detected"));
     assert!(source.contains("spec_db.consistency.check"));
 }

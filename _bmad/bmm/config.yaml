@@ -3,7 +3,7 @@
 # Version: 6.0.0-Beta.8
 # Date: 2026-02-16T17:27:52.654Z
 
-project_name: spec-db
+project_name: lattice
 user_skill_level: intermediate
 planning_artifacts: "{project-root}/_bmad-output/planning-artifacts"
 implementation_artifacts: "{project-root}/_bmad-output/implementation-artifacts"

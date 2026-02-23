@@ -25,9 +25,9 @@ storyTitle: 'Project Initialization & Configuration'
 
 | AC# | Criterion | Status |
 |-----|-----------|--------|
-| AC1 | `spec-db init` scaffolds specs/config/default data dirs and prints next steps. | PASS |
+| AC1 | `lattice init` scaffolds specs/config/default data dirs and prints next steps. | PASS |
 | AC2 | Config loading uses defaults for missing optional fields and errors on missing required fields. | PASS |
-| AC3 | Re-running `spec-db init` warns and preserves existing config file content. | PASS |
+| AC3 | Re-running `lattice init` warns and preserves existing config file content. | PASS |
 
 ## Completion Summary
 

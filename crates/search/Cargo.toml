@@ -3,7 +3,7 @@ name = "spec-db-search"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
-description = "Tantivy-based search engine for spec-db"
+description = "Tantivy-based search engine for lattice"
 
 [dependencies]
 spec-db-core = { workspace = true }

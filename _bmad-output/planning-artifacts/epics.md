@@ -11,11 +11,11 @@ inputDocuments:
   - architecture.md
 ---
 
-# spec-db - Epic Breakdown
+# lattice - Epic Breakdown
 
 ## Overview
 
-This document provides the complete epic and story breakdown for spec-db, decomposing the requirements from the PRD and Architecture requirements into implementable stories.
+This document provides the complete epic and story breakdown for lattice, decomposing the requirements from the PRD and Architecture requirements into implementable stories.
 
 ## Requirements Inventory
 
@@ -65,7 +65,7 @@ FR25: The system tracks the last-synced git commit SHA for both stores
 
 FR26: The system exposes all capabilities as MCP tools over stdio transport
 FR27: The system optionally exposes MCP tools over streamable-http transport
-FR28: Agents can discover available spec-db tools through MCP protocol
+FR28: Agents can discover available lattice tools through MCP protocol
 FR29: Agents can read individual spec content via `spec://{id}` resource
 FR30: Agents can read causal graph summary statistics via `graph://overview` resource
 FR31: Agents can read a specific node with all edges via `graph://node/{id}` resource
@@ -73,12 +73,12 @@ FR32: The `graph://overview` resource exposes disconnected clusters (specs with 
 
 **System Administration / CLI (6):**
 
-FR33: Users can initialize a new spec-db project with scaffolded directory structure and example specs
+FR33: Users can initialize a new lattice project with scaffolded directory structure and example specs
 FR34: Users can start the MCP server from a configuration file
 FR35: Users can manually trigger sync (full or incremental) via CLI
 FR36: Users can perform a destructive full index rebuild via CLI
 FR37: Users can view index health status (document count, last sync commit, consistency check result)
-FR38: The system reads all configuration from `.spec-db/config.yaml`
+FR38: The system reads all configuration from `.lattice/config.yaml`
 
 **Data Integrity (5):**
 
@@ -111,7 +111,7 @@ NFR10: Binary size < 30MB (single statically-linked binary)
 
 **Reliability (6):**
 
-NFR11: Rebuild idempotency — `git clone` + `spec-db rebuild` produces bit-identical indexes
+NFR11: Rebuild idempotency — `git clone` + `lattice rebuild` produces bit-identical indexes
 NFR12: Crash recovery — Fjall LSM-tree durability, no data loss on unexpected shutdown
 NFR13: Zero data lock-in — all state derived from git
 NFR14: Graceful degradation — search-only mode if causal graph fails to load
@@ -198,7 +198,7 @@ FR34: Epic 6 - Start MCP server from config
 FR35: Epic 6 - CLI sync trigger
 FR36: Epic 6 - CLI rebuild command
 FR37: Epic 6 - CLI status (health check)
-FR38: Epic 6 - Config from `.spec-db/config.yaml`
+FR38: Epic 6 - Config from `.lattice/config.yaml`
 FR39: Epic 7 - Cross-store consistency on startup
 FR40: Epic 7 - Cross-store consistency after sync
 FR41: Epic 7 - SHA + doc count comparison
@@ -211,7 +211,7 @@ FR46: Epic 7 - Drift detection metrics
 ## Epic List
 
 ### Epic 1: Foundation & Causal Knowledge Graph
-The spec-db workspace is scaffolded with core domain types, trait interfaces, and error hierarchy. The riskiest integration — DeepCausality + Fjall — is proven. Specs can be stored as causal graph nodes with `depends_on` edges, and agents can traverse impact chains and dependency paths.
+The lattice workspace is scaffolded with core domain types, trait interfaces, and error hierarchy. The riskiest integration — DeepCausality + Fjall — is proven. Specs can be stored as causal graph nodes with `depends_on` edges, and agents can traverse impact chains and dependency paths.
 **FRs covered:** FR6, FR7, FR8, FR9, FR10
 
 ### Epic 2: Spec Discovery & Search
@@ -231,7 +231,7 @@ Agents submit natural-language queries that are automatically classified and rou
 **FRs covered:** FR11, FR12, FR13
 
 ### Epic 6: MCP Server & CLI
-AI agents discover and call spec-db tools/resources via MCP over stdio (default) and optional streamable-http transport. Users manage spec-db via CLI commands: init (scaffold project), serve (start MCP server), sync (manual trigger), rebuild (destructive rebuild), and status (health check). All configuration reads from `.spec-db/config.yaml`.
+AI agents discover and call lattice tools/resources via MCP over stdio (default) and optional streamable-http transport. Users manage lattice via CLI commands: init (scaffold project), serve (start MCP server), sync (manual trigger), rebuild (destructive rebuild), and status (health check). All configuration reads from `.lattice/config.yaml`.
 **FRs covered:** FR26, FR27, FR28, FR29, FR30, FR31, FR32, FR33, FR34, FR35, FR36, FR37, FR38
 
 ### Epic 7: Data Integrity & Observability
@@ -240,7 +240,7 @@ Cross-store consistency is verified on startup and after every sync — comparin
 
 ## Epic 1: Foundation & Causal Knowledge Graph
 
-The spec-db workspace is scaffolded with core domain types, trait interfaces, and error hierarchy. The riskiest integration — DeepCausality + Fjall — is proven. Specs can be stored as causal graph nodes with `depends_on` edges, and agents can traverse impact chains and dependency paths.
+The lattice workspace is scaffolded with core domain types, trait interfaces, and error hierarchy. The riskiest integration — DeepCausality + Fjall — is proven. Specs can be stored as causal graph nodes with `depends_on` edges, and agents can traverse impact chains and dependency paths.
 
 ### Story 1.1: Scaffold Workspace & Core Domain Types
 
@@ -252,7 +252,7 @@ So that all subsequent development has a consistent, version-locked foundation.
 
 **Given** a clean checkout of the repository
 **When** I run `cargo build --workspace`
-**Then** the workspace compiles with `spec-db` (binary), `spec-db-core` (lib), and `spec-db-causal` (lib) crates
+**Then** the workspace compiles with `lattice` (binary), `spec-db-core` (lib), and `spec-db-causal` (lib) crates
 **And** `spec-db-core` exports `SpecId`, `SpecDoc`, `SpecNode`, `CausalEdge`, and `TrustLevel` types
 **And** `SpecId` validates the `spec::{segment}::{segment}` pattern and rejects invalid formats
 **And** `spec-db-core` exports `SearchEngine`, `CausalGraph`, and `SpecStore` traits
@@ -606,43 +606,43 @@ So that I always get the richest possible answer to my question.
 
 ## Epic 6: MCP Server & CLI
 
-AI agents discover and call spec-db tools/resources via MCP over stdio (default) and optional streamable-http transport. Users manage spec-db via CLI commands: init (scaffold project), serve (start MCP server), sync (manual trigger), rebuild (destructive rebuild), and status (health check). All configuration reads from `.spec-db/config.yaml`.
+AI agents discover and call lattice tools/resources via MCP over stdio (default) and optional streamable-http transport. Users manage lattice via CLI commands: init (scaffold project), serve (start MCP server), sync (manual trigger), rebuild (destructive rebuild), and status (health check). All configuration reads from `.lattice/config.yaml`.
 
 ### Story 6.1: Project Initialization & Configuration
 
 As a spec author,
-I want to initialize a new spec-db project with scaffolded structure and sensible defaults,
+I want to initialize a new lattice project with scaffolded structure and sensible defaults,
 So that I can start writing specs immediately without manual setup.
 
 **Acceptance Criteria:**
 
 **Given** an empty directory
-**When** I run `spec-db init`
+**When** I run `lattice init`
 **Then** a `specs/` directory is created with example spec files demonstrating frontmatter format, `depends_on` relationships, and tag conventions (FR33)
-**And** a `.spec-db/config.yaml` is created with documented defaults (spec directory, data directory, transport settings)
+**And** a `.lattice/config.yaml` is created with documented defaults (spec directory, data directory, transport settings)
 **And** next-steps instructions are printed to stdout
 
-**Given** a `.spec-db/config.yaml` file
+**Given** a `.lattice/config.yaml` file
 **When** the system starts
 **Then** all configuration is read from this file (FR38)
 **And** missing optional fields use sensible defaults
 **And** missing required fields produce a clear `ConfigError`
 
-**Given** `spec-db init` is run in a directory that already has `.spec-db/config.yaml`
+**Given** `lattice init` is run in a directory that already has `.lattice/config.yaml`
 **When** the command executes
 **Then** it warns the user and does not overwrite existing configuration
 
 ### Story 6.2: MCP Server with Tools over Stdio
 
 As an AI agent,
-I want to discover and call spec-db tools via MCP over stdio transport,
+I want to discover and call lattice tools via MCP over stdio transport,
 So that I can search, reason, and manage specs as a native capability.
 
 **Acceptance Criteria:**
 
-**Given** the MCP server started via `spec-db serve`
+**Given** the MCP server started via `lattice serve`
 **When** an agent connects over stdio
-**Then** all spec-db tools are discoverable via MCP protocol (FR28)
+**Then** all lattice tools are discoverable via MCP protocol (FR28)
 **And** the transport uses stdio with zero network configuration (FR26)
 
 **Given** an agent calling `search_specs(query, filters?)`
@@ -690,7 +690,7 @@ So that I can access spec intelligence through multiple access patterns and tran
 **When** the resource is read
 **Then** it returns the spec node with all inbound and outbound edges (FR31)
 
-**Given** streamable-http transport enabled in `.spec-db/config.yaml` with `http.auth_token` set
+**Given** streamable-http transport enabled in `.lattice/config.yaml` with `http.auth_token` set
 **When** an agent connects over HTTP
 **Then** requests without a valid bearer token are rejected with 401 (FR27, NFR24)
 **And** requests with a valid token are processed identically to stdio
@@ -703,28 +703,28 @@ So that I can access spec intelligence through multiple access patterns and tran
 
 As a spec author,
 I want CLI commands to manage the MCP server, trigger syncs, rebuild indexes, and check system health,
-So that I can operate spec-db without needing an AI agent.
+So that I can operate lattice without needing an AI agent.
 
 **Acceptance Criteria:**
 
-**Given** a configured spec-db project
-**When** I run `spec-db serve`
-**Then** the MCP server starts from `.spec-db/config.yaml` (FR34)
+**Given** a configured lattice project
+**When** I run `lattice serve`
+**Then** the MCP server starts from `.lattice/config.yaml` (FR34)
 **And** an initial sync runs automatically if no index exists
 **And** a cross-store consistency check runs before serving
 
-**Given** a running spec-db project
-**When** I run `spec-db sync`
+**Given** a running lattice project
+**When** I run `lattice sync`
 **Then** an incremental sync is triggered (FR35)
-**And** when I run `spec-db sync --full`, a full rebuild is triggered instead (FR35)
+**And** when I run `lattice sync --full`, a full rebuild is triggered instead (FR35)
 
-**Given** a spec-db project with existing indexes
-**When** I run `spec-db rebuild`
+**Given** a lattice project with existing indexes
+**When** I run `lattice rebuild`
 **Then** a destructive full index rebuild executes (FR36)
 **And** both stores are rebuilt from git (idempotent)
 
-**Given** a spec-db project
-**When** I run `spec-db status`
+**Given** a lattice project
+**When** I run `lattice status`
 **Then** I see document count, last sync commit SHA, and consistency check result (FR37)
 **And** the output clearly indicates whether stores are consistent or drifted
 
@@ -777,7 +777,7 @@ So that I can monitor performance, diagnose issues, and track system health.
 
 **Acceptance Criteria:**
 
-**Given** OpenTelemetry export configured in `.spec-db/config.yaml`
+**Given** OpenTelemetry export configured in `.lattice/config.yaml`
 **When** a search query executes
 **Then** a trace span `spec_db.search.query` is emitted with query text and result count (FR44)
 **And** a metric `spec_db.search.latency_ms` is recorded (FR45)

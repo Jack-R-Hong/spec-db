@@ -1,6 +1,6 @@
 //! Acceptance tests for Story 1.1: Scaffold Workspace & Core Domain Types
 //!
-//! AC3 (SpecId validation) has full coverage in `crates/spec-db-core/src/types.rs`.
+//! AC3 (SpecId validation) has full coverage in `crates/core/src/types.rs`.
 
 use std::process::Command;
 
@@ -25,7 +25,7 @@ fn ac1_workspace_contains_three_crates() {
     let manifest = include_str!("../Cargo.toml");
     assert!(manifest.contains("spec-db-core"));
     assert!(manifest.contains("spec-db-causal"));
-    assert!(manifest.contains("name = \"spec-db\""));
+    assert!(manifest.contains("name = \"lattice\""));
 }
 
 /// AC2: SpecId is exported and constructible.

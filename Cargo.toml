@@ -1,5 +1,5 @@
 [package]
-name = "spec-db"
+name = "lattice"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
@@ -7,8 +7,8 @@ description = "A causal specification database for AI agents"
 
 [workspace]
 members = [
-    "crates/spec-db-core",
-    "crates/spec-db-causal",
+    "crates/core",
+    "crates/causal",
     "crates/search",
     "crates/ingest",
     "crates/router",
@@ -34,8 +34,8 @@ rmcp = "=0.16.0"
 schemars = "0.8"
 axum = "0.8"
 bincode = { version = "=2.0.1", features = ["serde"] }
-spec-db-core = { path = "crates/spec-db-core" }
-spec-db-causal = { path = "crates/spec-db-causal" }
+spec-db-core = { path = "crates/core" }
+spec-db-causal = { path = "crates/causal" }
 spec-db-search = { path = "crates/search" }
 spec-db-ingest = { path = "crates/ingest" }
 spec-db-router = { path = "crates/router" }

@@ -9,7 +9,7 @@ lastStep: 'step-05-generate-output'
 lastSaved: '2026-02-23'
 ---
 
-# Test Design: All Epics - spec-db
+# Test Design: All Epics - lattice
 
 **Date:** 2026-02-23
 **Author:** Jack
@@ -19,7 +19,7 @@ lastSaved: '2026-02-23'
 
 ## Executive Summary
 
-**Scope:** Full test design covering all 7 epics (18 stories) for spec-db MVP.
+**Scope:** Full test design covering all 7 epics (18 stories) for lattice MVP.
 
 **Risk Summary:**
 
@@ -185,8 +185,8 @@ lastSaved: '2026-02-23'
 | 5.2-INT-001 | Both engines empty returns clear message | Integration | - | Existing: `both_empty_returns_clear_message` |
 | 5.2-INT-002 | Hybrid result combines search hits with causal context | Integration | R-008 | Verify composed response |
 | 5.2-INT-003 | Zero search results falls back to causal context (FR12) | Integration | R-015 | Verify fallback behavior |
-| 6.1-CLI-001 | `spec-db init` creates expected directory structure | E2E/CLI | - | Existing: `init_creates_structure` |
-| 6.1-CLI-002 | `spec-db init` is idempotent (no overwrite) | E2E/CLI | - | Existing: `init_idempotent` |
+| 6.1-CLI-001 | `lattice init` creates expected directory structure | E2E/CLI | - | Existing: `init_creates_structure` |
+| 6.1-CLI-002 | `lattice init` is idempotent (no overwrite) | E2E/CLI | - | Existing: `init_idempotent` |
 | 6.2-INT-002 | MCP tool input deserialization works | Integration | R-003 | Existing: `tool_input_deserialization_works` |
 | 6.3-INT-001 | Resource URI parsing (spec://, graph://overview, graph://node/) | Integration | R-003 | Existing: `resource_uri_parsing_works` |
 | 7.1-INT-003 | Doc count mismatch detected as drift | Integration | R-002 | Verify doc count comparison |
@@ -218,9 +218,9 @@ lastSaved: '2026-02-23'
 | 6.2-PERF-001 | MCP tool response <100ms end-to-end (NFR8) | Integration | R-012 | Performance benchmark |
 | 6.3-INT-002 | HTTP without valid bearer token returns 401 (NFR24) | Integration | R-004 | Auth enforcement |
 | 6.3-INT-003 | HTTP disabled by default = no network surface (NFR23) | Integration | R-004 | Default-deny |
-| 6.4-CLI-001 | `spec-db sync` command parsed correctly | E2E/CLI | - | Existing: `sync_command_is_parsed` |
-| 6.4-CLI-002 | `spec-db rebuild` command parsed correctly | E2E/CLI | - | Existing: `rebuild_command_is_parsed` |
-| 6.4-CLI-003 | `spec-db status` shows doc count, SHA, consistency | E2E/CLI | - | Existing: `status_command_is_parsed` |
+| 6.4-CLI-001 | `lattice sync` command parsed correctly | E2E/CLI | - | Existing: `sync_command_is_parsed` |
+| 6.4-CLI-002 | `lattice rebuild` command parsed correctly | E2E/CLI | - | Existing: `rebuild_command_is_parsed` |
+| 6.4-CLI-003 | `lattice status` shows doc count, SHA, consistency | E2E/CLI | - | Existing: `status_command_is_parsed` |
 | 7.1-INT-005 | Auto-rebuild terminates (no infinite loop) on persistent drift | Integration | R-016 | Verify escalation cap |
 
 **Total P2**: 22 tests, ~8-15 hours

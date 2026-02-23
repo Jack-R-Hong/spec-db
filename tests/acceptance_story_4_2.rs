@@ -32,10 +32,10 @@ fn _run_git(repo_path: &Path, args: &[&str]) {
     let status = Command::new("git")
         .args(args)
         .current_dir(repo_path)
-        .env("GIT_AUTHOR_NAME", "spec-db-tests")
-        .env("GIT_AUTHOR_EMAIL", "tests@spec-db.local")
-        .env("GIT_COMMITTER_NAME", "spec-db-tests")
-        .env("GIT_COMMITTER_EMAIL", "tests@spec-db.local")
+        .env("GIT_AUTHOR_NAME", "lattice-tests")
+        .env("GIT_AUTHOR_EMAIL", "tests@lattice.local")
+        .env("GIT_COMMITTER_NAME", "lattice-tests")
+        .env("GIT_COMMITTER_EMAIL", "tests@lattice.local")
         .status()
         .unwrap();
     _assert_success(status, &format!("git {}", args.join(" ")));
