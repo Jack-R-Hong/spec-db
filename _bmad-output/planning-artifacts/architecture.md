@@ -3,12 +3,18 @@ stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
 lastStep: 8
 status: 'complete'
 completedAt: '2026-02-23'
+webUiExtension:
+  status: 'complete'
+  addedAt: '2026-02-23'
+  inputDocuments:
+    - ux-design-specification.md
 inputDocuments:
   - prd.md
   - product-brief-spec-db-2026-02-17.md
   - research-technical-spec-db.md
   - brainstorming-spec-db.md
   - docs/project-context.md
+  - ux-design-specification.md
 workflowType: 'architecture'
 project_name: 'spec-db'
 user_name: 'Jack'
@@ -674,3 +680,424 @@ spec-db (binary)
 3. Define `SearchEngine`, `CausalGraph`, `SpecStore` traits in `core`
 4. Define `SpecDbError` hierarchy in `core`
 5. Begin DeepCausality + Fjall integration in `causal` (build order #2 — riskiest piece)
+
+---
+
+## Web UI Architecture Extension
+
+_This section extends the core architecture with a web-based causal graph UI. All decisions below are additive — they do not modify any existing architectural decisions, crate boundaries, or patterns defined above. The web UI layer sits on top of the existing system._
+
+### Context & Scope
+
+The UX design specification (`ux-design-specification.md`) defines a Svelte Flow-based graph editor served directly by the spec-db binary. This architecture section covers:
+1. New `spec-db-web` Rust crate (REST API + static asset serving)
+2. Frontend build pipeline (Svelte → Vite → static assets → embedded in binary)
+3. Git write-back pipeline (REST API → modify YAML frontmatter → git commit)
+4. Integration with existing crate boundaries
+
+**What this is NOT:** A separate deployment. The web UI is embedded in the same `spec-db` binary. `spec-db serve` starts both MCP (stdio) and the web UI (HTTP) from a single process.
+
+### New Technology Decisions
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| axum | 0.8 (already in workspace) | HTTP server for REST API + static asset serving |
+| rust-embed | 8.x | Embed compiled Svelte assets into the binary at compile time |
+| tower-http | 0.6 | CORS middleware, compression, static file serving utilities |
+| Svelte | 5.x | Frontend framework |
+| @xyflow/svelte | latest | Svelte Flow — graph canvas with drag-to-connect, custom nodes/edges |
+| Vite | 6.x | Frontend build tool (via SvelteKit) |
+| dagre / elkjs | latest | Graph layout algorithm (force-directed with hierarchy support) |
+
+**Note:** `axum` is already a workspace dependency. `rust-embed` and `tower-http` are new additions.
+
+### New Crate: `spec-db-web`
+
+**Purpose:** HTTP server providing REST API endpoints for the web UI and serving embedded static assets.
+
+**Build order:** Phase 7+ (after MCP server is functional). The web crate depends on the same subsystems as the MCP crate but exposes them over REST/JSON instead of MCP protocol.
+
+#### Crate Dependencies
+
+```
+spec-db-web
+├── core       → SpecId, SpecDoc, CausalEdge, SpecDbError
+├── causal     → CausalEngine (graph queries, node/edge CRUD)
+├── search     → SearchIndex (full-text search)
+├── ingest     → GitSync (sync/rebuild triggers, frontmatter modification)
+└── [external]
+    ├── axum         → HTTP routing
+    ├── rust-embed   → Static asset embedding
+    ├── tower-http   → CORS, compression
+    ├── serde_json   → JSON serialization
+    └── tokio        → Async runtime (shared with MCP)
+```
+
+#### Source Files
+
+```
+crates/web/
+├── Cargo.toml              # name = "spec-db-web"
+├── src/
+│   ├── lib.rs              # Public API: WebServer::new(), WebServer::router()
+│   ├── api.rs              # REST endpoint handlers (axum handlers)
+│   ├── assets.rs           # rust-embed asset serving + SPA fallback
+│   ├── state.rs            # Shared application state (Arc<AppState>)
+│   └── writeback.rs        # Git write-back pipeline: edit frontmatter → git commit → re-sync
+└── tests/
+    └── integration.rs      # REST API integration tests
+```
+
+### REST API Design
+
+All endpoints return JSON. All mutations trigger git write-back.
+
+#### Read Endpoints
+
+| Method | Path | Handler | Returns |
+|--------|------|---------|---------|
+| `GET` | `/api/graph` | `api::get_graph` | Full graph: `{ nodes: [...], edges: [...] }` |
+| `GET` | `/api/spec/:id` | `api::get_spec` | Single spec with metadata and edges |
+| `GET` | `/api/impact/:id` | `api::get_impact` | Downstream impact chain for a spec |
+| `GET` | `/api/dependencies/:id` | `api::get_dependencies` | Upstream dependencies for a spec |
+| `GET` | `/api/search?q=...&tags=...` | `api::search` | Search results (delegates to Tantivy) |
+| `GET` | `/api/status` | `api::get_status` | Sync status: SHA, doc count, consistency |
+
+#### Write Endpoints
+
+| Method | Path | Handler | Action |
+|--------|------|---------|--------|
+| `PUT` | `/api/spec/:id` | `api::update_spec` | Modify frontmatter fields (title, tags, owner, depends_on) |
+| `POST` | `/api/edge` | `api::create_edge` | Add `depends_on` edge between two specs |
+| `DELETE` | `/api/edge/:from/:to` | `api::delete_edge` | Remove `depends_on` edge |
+| `POST` | `/api/sync` | `api::trigger_sync` | Trigger incremental or full rebuild |
+| `POST` | `/api/undo` | `api::undo_last` | Revert last git commit (5-second window) |
+
+#### API Response Format
+
+Consistent with existing MCP tool response patterns:
+
+```json
+// Success
+{ "data": { ... } }
+
+// Error
+{ "error": { "error_type": "GraphError", "message": "...", "context": null } }
+```
+
+#### Shared State
+
+```rust
+pub struct AppState {
+    pub repo_path: PathBuf,
+    pub specs_root: String,
+    pub tantivy_dir: PathBuf,
+    pub fjall_dir: PathBuf,
+    pub last_undo: Mutex<Option<UndoState>>,
+}
+
+pub struct UndoState {
+    pub commit_sha: String,
+    pub created_at: Instant,
+    pub description: String,
+}
+```
+
+All read handlers use `spawn_blocking` to call into sync `search`/`causal` crate functions — same pattern as MCP handlers.
+
+### Git Write-Back Pipeline
+
+The most complex new subsystem. When a user edits frontmatter or creates/removes edges in the UI:
+
+```
+User action → REST API → writeback::apply_edit()
+  1. Open spec markdown file (repo_path + specs_root + spec_path)
+  2. Parse YAML frontmatter (serde_yml)
+  3. Modify target field(s) in frontmatter
+  4. Preserve markdown body unchanged
+  5. Write modified file back to disk
+  6. git add + git commit (via git2) with message: "spec-db: update {spec_id} ({field})"
+  7. Store commit SHA in UndoState (5-second window)
+  8. Trigger incremental sync (update Tantivy + Fjall indexes)
+  9. Return success response with file path
+```
+
+**Write-back lives in `crates/web/src/writeback.rs`**, not in `ingest`. Rationale: write-back is a web-UI-only concern. The `ingest` crate handles git→index sync (reading from git). Write-back is the reverse: index→git (writing to git). Keeping them separate avoids coupling the ingest pipeline to UI concerns.
+
+**Undo mechanism:**
+- Each git write-back stores the commit SHA + timestamp in `AppState::last_undo`
+- `POST /api/undo` checks if the undo window (5 seconds) is still open
+- If yes: `git revert --no-edit {sha}` via git2, then incremental sync
+- If no: returns error "Undo window expired"
+- Only the most recent write-back is undoable (not a full undo stack)
+
+**Concurrency:** `Mutex<Option<UndoState>>` ensures only one write-back at a time. Write operations are serialized. Read operations are concurrent.
+
+### Static Asset Embedding
+
+**Chosen approach: `rust-embed`**
+
+```rust
+#[derive(rust_embed::RustEmbed)]
+#[folder = "web-ui/build/"]
+struct WebAssets;
+```
+
+**Build pipeline:**
+```
+web-ui/        (Svelte source)
+  → npm run build
+  → web-ui/build/    (static HTML/JS/CSS)
+  → rust-embed compiles into binary
+  → spec-db serve serves from memory
+```
+
+**Asset serving strategy:**
+- Known static files (`.js`, `.css`, `.png`, `.ico`) served directly from embedded assets
+- SPA fallback: any path not matching `/api/*` or a known static file returns `index.html`
+- `Content-Type` headers derived from file extension
+- `Cache-Control: max-age=31536000, immutable` for hashed assets (Vite adds content hashes)
+- `Cache-Control: no-cache` for `index.html`
+- In debug builds (`#[cfg(debug_assertions)]`), `rust-embed` reads from filesystem (hot reload friendly)
+
+### Frontend Source Layout
+
+```
+web-ui/                              # NOT inside crates/ — separate npm project
+├── package.json
+├── svelte.config.js
+├── vite.config.ts
+├── tsconfig.json
+├── src/
+│   ├── app.html                     # SvelteKit shell
+│   ├── routes/
+│   │   └── +page.svelte             # Single page — the graph UI
+│   ├── lib/
+│   │   ├── components/
+│   │   │   ├── SpecNode.svelte      # Custom Svelte Flow node
+│   │   │   ├── CausalEdge.svelte    # Custom Svelte Flow edge
+│   │   │   ├── DetailPanel.svelte   # Slide-in spec detail/edit panel
+│   │   │   ├── HeaderBar.svelte     # Top bar: search, status, rebuild
+│   │   │   ├── ToastNotification.svelte
+│   │   │   └── SearchFilter.svelte
+│   │   ├── stores/
+│   │   │   ├── graph.ts             # Svelte store: nodes, edges from API
+│   │   │   ├── selection.ts         # Svelte store: selected node, impact chain
+│   │   │   ├── sync.ts              # Svelte store: sync status, SHA
+│   │   │   └── toasts.ts            # Svelte store: toast notification stack
+│   │   ├── api.ts                   # REST API client (fetch wrappers)
+│   │   └── layout.ts               # dagre/elkjs layout computation
+│   └── app.css                      # Global styles (CSS custom properties)
+├── static/
+│   └── favicon.ico
+└── build/                           # Vite output (gitignored, consumed by rust-embed)
+```
+
+**SvelteKit adapter:** `@sveltejs/adapter-static` — produces a static site (no SSR needed since the API is on the same origin).
+
+### Updated Project Directory Structure
+
+```
+spec-db/
+├── Cargo.toml                        # Workspace root + binary crate
+├── Cargo.lock
+├── src/
+│   └── main.rs                       # CLI: init | serve | sync | rebuild | status
+├── crates/
+│   ├── core/                         # Shared types, traits, errors
+│   ├── causal/                       # DeepCausality + Fjall
+│   ├── search/                       # Tantivy indexing + search
+│   ├── ingest/                       # Parsing + git sync (git → index)
+│   ├── router/                       # Query classification
+│   ├── mcp/                          # MCP server (rmcp, stdio)
+│   └── web/                          # NEW: REST API + asset serving
+│       ├── Cargo.toml                # name = "spec-db-web"
+│       ├── src/
+│       │   ├── lib.rs
+│       │   ├── api.rs
+│       │   ├── assets.rs
+│       │   ├── state.rs
+│       │   └── writeback.rs
+│       └── tests/
+│           └── integration.rs
+├── web-ui/                           # NEW: Svelte frontend source
+│   ├── package.json
+│   ├── svelte.config.js
+│   ├── vite.config.ts
+│   ├── src/
+│   └── build/                        # Vite output (gitignored)
+├── specs/
+├── data/
+├── .spec-db/
+└── docs/
+```
+
+### Updated Crate Dependency Graph
+
+```
+spec-db (binary)
+├── mcp            → MCP server (stdio)
+│   ├── router     → query classification
+│   │   ├── search
+│   │   │   └── core
+│   │   └── causal
+│   │       └── core
+│   └── ingest
+│       ├── search
+│       ├── causal
+│       └── core
+├── web            → NEW: REST API + web UI (HTTP)
+│   ├── search     → Tantivy search (read)
+│   │   └── core
+│   ├── causal     → graph queries + node/edge CRUD (read + write)
+│   │   └── core
+│   ├── ingest     → sync trigger + frontmatter file paths
+│   │   └── core
+│   └── core       → shared types
+└── core
+```
+
+**Key observation:** `web` and `mcp` are siblings — both depend on `search`, `causal`, `ingest`, and `core`. They share the same subsystems but expose them through different protocols (REST vs MCP). Neither depends on the other.
+
+### Updated Workspace Expansion Plan
+
+| Phase | Crates in Workspace | What's New |
+|-------|-------------------|------------|
+| 1 | `core`, `causal` | Shared types + riskiest integration |
+| 2 | + `search` | Tantivy indexing |
+| 3 | + `ingest` | Spec parsing + git sync |
+| 4 | + `router` | Query classification |
+| 5 | + `mcp` | MCP server wiring |
+| 6 | Root binary complete | CLI + full startup flow |
+| **7** | **+ `web`** | **REST API + static asset serving** |
+| **8** | **+ `web-ui/` (npm)** | **Svelte frontend: graph canvas, detail panel, editing** |
+
+### Serve Command Changes
+
+The `serve` command in `main.rs` will start both MCP (stdio) and HTTP (web UI) concurrently:
+
+```rust
+async fn run_serve(cwd: &Path, cfg: &SpecDbConfig) -> anyhow::Result<()> {
+    // ... existing setup (sync, consistency check) ...
+
+    let state = Arc::new(AppState { /* shared paths */ });
+
+    // HTTP server for web UI (always starts)
+    let web_router = spec_db_web::WebServer::router(state.clone());
+    let http_addr = cfg.web.bind_address(); // default: 127.0.0.1:3000
+    let http_handle = tokio::spawn(async move {
+        let listener = tokio::net::TcpListener::bind(&http_addr).await?;
+        println!("web UI: http://{http_addr}");
+        axum::serve(listener, web_router).await
+    });
+
+    // MCP server over stdio (existing)
+    let mcp_server = SpecDbMcpServer::new(/* ... */);
+    let mcp_handle = tokio::spawn(async move {
+        let service = mcp_server.serve(rmcp::transport::io::stdio()).await?;
+        service.waiting().await
+    });
+
+    // Wait for either to finish (stdio EOF or HTTP shutdown)
+    tokio::select! {
+        result = http_handle => result??,
+        result = mcp_handle => result??,
+    }
+    Ok(())
+}
+```
+
+### Configuration Extension
+
+New section in `.spec-db/config.yaml`:
+
+```yaml
+web:
+  enabled: true           # Enable/disable web UI (default: true)
+  host: "127.0.0.1"       # Bind address (default: localhost only)
+  port: 3000              # HTTP port (default: 3000)
+```
+
+This extends the existing `SpecDbConfig` struct in `spec-db-core`:
+
+```rust
+#[derive(Deserialize, Serialize)]
+pub struct WebConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_host")]
+    pub host: String,
+    #[serde(default = "default_port")]
+    pub port: u16,
+}
+```
+
+### Security Considerations
+
+| Concern | Mitigation |
+|---------|-----------|
+| **Network exposure** | Binds to `127.0.0.1` by default — localhost only. No remote access unless explicitly configured. |
+| **Write operations** | All mutations go through git commit — full audit trail. Undo mechanism as safety net. |
+| **CORS** | Not needed — frontend and API are same origin (same port). `tower-http` CORS available if needed later. |
+| **Input validation** | All SpecId inputs validated through existing `SpecId` newtype validation. Frontmatter fields validated against schema. |
+| **Path traversal** | `rust-embed` serves only embedded assets — no filesystem path traversal possible. API endpoints only accept SpecId (validated) — no arbitrary file paths. |
+| **Auth** | No auth for localhost. If `web.host` is set to `0.0.0.0`, bearer token auth from existing `http.auth_token` config is enforced via axum middleware. |
+
+### Pattern Compliance
+
+The web crate follows all existing patterns:
+
+| Pattern | Compliance |
+|---------|-----------|
+| **N1. Module file style** | Modern style (`api.rs`, not `api/mod.rs`) |
+| **N2. Crate naming** | `spec-db-web` in Cargo.toml |
+| **N3. Error handling** | `thiserror` in lib, errors map to JSON response format |
+| **N5. Tracing spans** | `spec_db.web.api.get_graph`, `spec_db.web.writeback.apply` |
+| **S1. Test location** | Unit tests inline, integration in `tests/` |
+| **S2. Public API** | `lib.rs` exports `WebServer` only |
+| **S3. Trait interfaces** | Uses `SearchEngine`, `CausalGraph`, `SpecStore` traits from core |
+| **S4. Shared types** | All domain types from `spec-db-core` |
+| **P3. Async boundary** | axum handlers are async, call `spawn_blocking` for sync operations |
+
+### Anti-Patterns Specific to Web Crate
+
+**NEVER:**
+- Serve files from filesystem in release mode (always use `rust-embed`)
+- Allow write operations without git commit (every mutation = git commit)
+- Accept arbitrary file paths in API (only validated SpecId values)
+- Return HTML from API endpoints (always JSON under `/api/`)
+- Import from `mcp` crate (web and mcp are siblings, not parent-child)
+- Add authentication complexity for localhost-only mode
+
+### Web UI Architecture Validation
+
+**Coherence with existing architecture:** ✅
+- Uses same shared types, traits, and error hierarchy from `core`
+- Same `spawn_blocking` async boundary pattern as MCP
+- Same subsystem access pattern (search, causal, ingest) as MCP
+- Extends config format without breaking existing config parsing
+- No changes to existing crate APIs required
+
+**Requirements coverage:**
+- UX design spec fully supported: graph rendering, impact trace, on-canvas editing, rebuild, undo
+- Git write-back pipeline is architecturally sound: file modification → git commit → re-sync → respond
+- Performance: embedded assets serve from memory (sub-1ms); API calls use same fast subsystems as MCP
+
+**Risk assessment:**
+1. **Frontend build integration** — `npm run build` must run before `cargo build`. CI needs a build step for web-ui. Risk: Medium. Mitigation: Makefile/justfile with `build-web` target.
+2. **rust-embed binary size** — Svelte builds are typically small (<500KB gzipped). Impact on 30MB binary target is minimal.
+3. **Git write-back concurrency** — Serialized via Mutex. If two users edit simultaneously, one blocks. Acceptable for the target scale (1-2 users on localhost).
+
+### Implementation Handoff (Web UI)
+
+**First implementation steps:**
+1. Add `spec-db-web` to workspace in root `Cargo.toml`
+2. Scaffold `crates/web/` with `lib.rs`, `api.rs`, `assets.rs`, `state.rs`, `writeback.rs`
+3. Implement `GET /api/graph` and `GET /api/status` (read-only endpoints first)
+4. Add `rust-embed` with a placeholder `web-ui/build/index.html`
+5. Modify `run_serve` in `main.rs` to start HTTP alongside stdio MCP
+6. Scaffold `web-ui/` with SvelteKit + Svelte Flow
+7. Implement SpecNode custom component + graph rendering (P1 from UX design)
+8. Implement remaining read endpoints (`/api/spec/:id`, `/api/impact/:id`, `/api/search`)
+9. Implement write-back pipeline + write endpoints
+10. Implement undo mechanism
