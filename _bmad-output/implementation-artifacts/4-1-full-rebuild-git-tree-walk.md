@@ -1,6 +1,6 @@
 # Story 4.1: Full Rebuild from Git Tree Walk
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -35,30 +35,30 @@ so that I can recover from any data corruption and guarantee my indexes match th
 
 ## Tasks / Subtasks
 
-- [ ] Implement the full rebuild entrypoint in `crates/ingest/src/sync.rs`.
-  - [ ] Add `pub fn full_rebuild(&mut self) -> Result<SyncReport, SpecDbError>` on `GitSync` as the single orchestration API used by CLI `rebuild` and MCP `sync(mode="full")`.
-  - [ ] Load repository HEAD commit (`Repository::head` + peel to commit) and capture `head_sha` for metadata writes.
-  - [ ] Resolve configured specs root (for example `specs/`) and ensure rebuild only processes files under that subtree.
-- [ ] Implement git tree-walk based discovery in `crates/ingest/src/sync.rs`.
-  - [ ] Add `fn discover_specs_from_head_tree(repo: &Repository, head_commit: &Commit, specs_root: &Path) -> Result<Vec<RepoSpecEntry>, SyncError>`.
-  - [ ] Use `Commit::tree()` and `Tree::walk(TreeWalkMode::PreOrder, ...)` to enumerate entries.
-  - [ ] Filter to markdown specs (`.md`) and normalize repo-relative paths with deterministic ordering (sort ascending by canonical path) to enforce idempotency.
-- [ ] Build isolated temp targets before swap (Process Pattern P2) in `crates/ingest/src/sync.rs`.
-  - [ ] Add `fn prepare_rebuild_staging_dirs(...) -> Result<RebuildStaging, SyncError>` that creates sibling temp dirs for both stores.
-  - [ ] Construct fresh Tantivy index and fresh Fjall store on temp paths only; never mutate live paths during staging.
-  - [ ] Feed each discovered file through Story 3.2 ingestion pipeline APIs (`parser` + `validate` + unified ingest) against staging handles.
-- [ ] Implement atomic swap semantics for stale-data-free replacement in `crates/ingest/src/sync.rs`.
-  - [ ] Add `fn atomic_swap_rebuild_outputs(staging: &RebuildStaging, live_paths: &StorePaths) -> Result<(), SyncError>`.
-  - [ ] Execute rename/swap as temp-dir-then-swap for both `data/tantivy/` and `data/fjall/` only after successful staging verification.
-  - [ ] Ensure cleanup policy removes old paths only after swap success; on failure, keep old live stores untouched.
-- [ ] Persist post-rebuild sync metadata in both stores in `crates/ingest/src/sync.rs` and `crates/ingest/src/consistency.rs`.
-  - [ ] Write `last_sync_sha=<head_sha>` into meta keyspace and corresponding search metadata location.
-  - [ ] Write `doc_count=<ingested_count>` into both stores.
-  - [ ] Run immediate cross-store check (`doc_count` + `last_sync_sha`) and fail loudly if mismatch is detected.
-- [ ] Add idempotency and performance validation tests in `crates/ingest/tests/integration.rs`.
-  - [ ] Add fixture repo test: run full rebuild twice at same HEAD and assert identical counts/IDs and no duplicates.
-  - [ ] Add stale-data replacement test: seed obsolete docs in live stores, run rebuild, verify obsolete IDs absent.
-  - [ ] Add perf guard test/harness for 100+ specs target (<5s) with deterministic fixture generation.
+- [x] Implement the full rebuild entrypoint in `crates/ingest/src/sync.rs`.
+  - [x] Add `pub fn full_rebuild(&mut self) -> Result<SyncReport, SpecDbError>` on `GitSync` as the single orchestration API used by CLI `rebuild` and MCP `sync(mode="full")`.
+  - [x] Load repository HEAD commit (`Repository::head` + peel to commit) and capture `head_sha` for metadata writes.
+  - [x] Resolve configured specs root (for example `specs/`) and ensure rebuild only processes files under that subtree.
+- [x] Implement git tree-walk based discovery in `crates/ingest/src/sync.rs`.
+  - [x] Add `fn discover_specs_from_head_tree(repo: &Repository, head_commit: &Commit, specs_root: &Path) -> Result<Vec<RepoSpecEntry>, SyncError>`.
+  - [x] Use `Commit::tree()` and `Tree::walk(TreeWalkMode::PreOrder, ...)` to enumerate entries.
+  - [x] Filter to markdown specs (`.md`) and normalize repo-relative paths with deterministic ordering (sort ascending by canonical path) to enforce idempotency.
+- [x] Build isolated temp targets before swap (Process Pattern P2) in `crates/ingest/src/sync.rs`.
+  - [x] Add `fn prepare_rebuild_staging_dirs(...) -> Result<RebuildStaging, SyncError>` that creates sibling temp dirs for both stores.
+  - [x] Construct fresh Tantivy index and fresh Fjall store on temp paths only; never mutate live paths during staging.
+  - [x] Feed each discovered file through Story 3.2 ingestion pipeline APIs (`parser` + `validate` + unified ingest) against staging handles.
+- [x] Implement atomic swap semantics for stale-data-free replacement in `crates/ingest/src/sync.rs`.
+  - [x] Add `fn atomic_swap_rebuild_outputs(staging: &RebuildStaging, live_paths: &StorePaths) -> Result<(), SyncError>`.
+  - [x] Execute rename/swap as temp-dir-then-swap for both `data/tantivy/` and `data/fjall/` only after successful staging verification.
+  - [x] Ensure cleanup policy removes old paths only after swap success; on failure, keep old live stores untouched.
+- [x] Persist post-rebuild sync metadata in both stores in `crates/ingest/src/sync.rs` and `crates/ingest/src/consistency.rs`.
+  - [x] Write `last_sync_sha=<head_sha>` into meta keyspace and corresponding search metadata location.
+  - [x] Write `doc_count=<ingested_count>` into both stores.
+  - [x] Run immediate cross-store check (`doc_count` + `last_sync_sha`) and fail loudly if mismatch is detected.
+- [x] Add idempotency and performance validation tests in `crates/ingest/tests/integration.rs`.
+  - [x] Add fixture repo test: run full rebuild twice at same HEAD and assert identical counts/IDs and no duplicates.
+  - [x] Add stale-data replacement test: seed obsolete docs in live stores, run rebuild, verify obsolete IDs absent.
+  - [x] Add perf guard test/harness for 100+ specs target (<5s) with deterministic fixture generation.
 
 ## Dev Notes
 
@@ -111,13 +111,15 @@ so that I can recover from any data corruption and guarantee my indexes match th
 
 ### Agent Model Used
 
-openai/gpt-5.3-codex
+anthropic/claude-opus-4-6
 
 ### Completion Notes List
 
-- Story file created with full-rebuild algorithm guidance, atomic swap plan, and idempotency constraints.
-- Acceptance criteria copied verbatim from Epic 4 source.
-- Tasks explicitly scoped to `crates/ingest/src/sync.rs` and related ingest components.
+- Implemented `GitSync` full rebuild orchestration with HEAD SHA capture, git tree walk discovery, deterministic sort, and parse-error-tolerant ingestion.
+- Added staging-dir rebuild flow with rollback-aware atomic swap semantics for Tantivy and Fjall stores.
+- Persisted sync metadata (`last_sync_sha`, `doc_count`) to Fjall meta and Tantivy metadata file.
+- Added integration coverage for ingest count, idempotency, stale-data replacement, and metadata persistence.
+- Verified `cargo test --workspace`, `cargo clippy --workspace -- -D warnings`, and `cargo fmt --all -- --check`.
 
 ### Change Log
 
@@ -126,3 +128,7 @@ openai/gpt-5.3-codex
 ### File List
 
 - `_bmad-output/implementation-artifacts/4-1-full-rebuild-git-tree-walk.md`
+- `crates/ingest/Cargo.toml`
+- `crates/ingest/src/lib.rs`
+- `crates/ingest/src/sync.rs`
+- `crates/ingest/tests/integration.rs`

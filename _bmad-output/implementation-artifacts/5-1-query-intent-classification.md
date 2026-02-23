@@ -1,6 +1,6 @@
 # Story 5.1: Query Intent Classification
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -28,26 +28,26 @@ so that they are routed to the correct engine without me needing to choose the r
 
 ## Tasks / Subtasks
 
-- [ ] Scaffold router crate and wire module surface for Build Order #6 in `crates/router/Cargo.toml` and `crates/router/src/lib.rs`.
-  - [ ] Set package name to `spec-db-router` and depend on `spec-db-core` traits (`SearchEngine`, `CausalGraph`) for cross-crate boundaries.
-  - [ ] Export classifier API from `crates/router/src/lib.rs` via explicit re-exports (no wildcard exports).
-- [ ] Implement keyword heuristic classifier in `crates/router/src/classifier.rs`.
-  - [ ] Add `enum QueryIntent { Search, Causal, Hybrid }` and `struct IntentClassifier`.
-  - [ ] Implement `fn classify(query: &str) -> QueryIntent` with case-insensitive token matching for causal signals: `impact`, `depends`, `breaks`, `affects`, `upstream`, `downstream`.
-  - [ ] Implement hybrid detection when both causal signals and non-empty search terms are present.
-  - [ ] Set default path to `QueryIntent::Search` when no causal signal words are detected.
-- [ ] Add low-overhead normalization utilities in `crates/router/src/classifier.rs`.
-  - [ ] Normalize once per query (lowercase + lightweight token scan) without allocation-heavy transforms.
-  - [ ] Keep classifier path pure sync and side-effect free to support `< 5ms` overhead target (NFR3).
-- [ ] Add router integration contract in `crates/router/src/lib.rs`.
-  - [ ] Add `QueryRouter<S: SearchEngine, C: CausalGraph>` field ownership and constructor wiring.
-  - [ ] Route by intent only (classification phase), with execution/composition delegated to Story 5.2 implementation.
-  - [ ] Document convenience-only role for unified `query()` API; direct `search_specs()` and `trace_impact()` remain primary paths.
-- [ ] Implement tests in `crates/router/tests/integration.rs` and unit tests in `crates/router/src/classifier.rs`.
-  - [ ] Verify causal classification for each required signal word.
-  - [ ] Verify search-default behavior for queries without causal words.
-  - [ ] Verify hybrid classification for mixed queries (example: "what depends on rate limiting").
-  - [ ] Add micro-benchmark-style timing assertion harness (non-flaky threshold guard) to validate `< 5ms` classification overhead on representative query corpus.
+- [x] Scaffold router crate and wire module surface for Build Order #6 in `crates/router/Cargo.toml` and `crates/router/src/lib.rs`.
+  - [x] Set package name to `spec-db-router` and depend on `spec-db-core` traits (`SearchEngine`, `CausalGraph`) for cross-crate boundaries.
+  - [x] Export classifier API from `crates/router/src/lib.rs` via explicit re-exports (no wildcard exports).
+- [x] Implement keyword heuristic classifier in `crates/router/src/classifier.rs`.
+  - [x] Add `enum QueryIntent { Search, Causal, Hybrid }` and `struct IntentClassifier`.
+  - [x] Implement `fn classify(query: &str) -> QueryIntent` with case-insensitive token matching for causal signals: `impact`, `depends`, `breaks`, `affects`, `upstream`, `downstream`.
+  - [x] Implement hybrid detection when both causal signals and non-empty search terms are present.
+  - [x] Set default path to `QueryIntent::Search` when no causal signal words are detected.
+- [x] Add low-overhead normalization utilities in `crates/router/src/classifier.rs`.
+  - [x] Normalize once per query (lowercase + lightweight token scan) without allocation-heavy transforms.
+  - [x] Keep classifier path pure sync and side-effect free to support `< 5ms` overhead target (NFR3).
+- [x] Add router integration contract in `crates/router/src/lib.rs`.
+  - [x] Add `QueryRouter<S: SearchEngine, C: CausalGraph>` field ownership and constructor wiring.
+  - [x] Route by intent only (classification phase), with execution/composition delegated to Story 5.2 implementation.
+  - [x] Document convenience-only role for unified `query()` API; direct `search_specs()` and `trace_impact()` remain primary paths.
+- [x] Implement tests in `crates/router/tests/integration.rs` and unit tests in `crates/router/src/classifier.rs`.
+  - [x] Verify causal classification for each required signal word.
+  - [x] Verify search-default behavior for queries without causal words.
+  - [x] Verify hybrid classification for mixed queries (example: "what depends on rate limiting").
+  - [x] Add micro-benchmark-style timing assertion harness (non-flaky threshold guard) to validate `< 5ms` classification overhead on representative query corpus.
 
 ## Dev Notes
 
@@ -80,7 +80,7 @@ so that they are routed to the correct engine without me needing to choose the r
 
 ### Agent Model Used
 
-openai/gpt-5.3-codex
+anthropic/claude-opus-4-6
 
 ### Completion Notes List
 

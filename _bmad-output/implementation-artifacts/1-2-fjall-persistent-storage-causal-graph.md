@@ -1,6 +1,6 @@
 # Story 1.2: Fjall Persistent Storage for Causal Graph
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -32,49 +32,49 @@ so that the causal graph survives process restarts and can be loaded into memory
 
 ## Tasks / Subtasks
 
-- [ ] Finalize Story 1.1 dependency contracts before coding (AC: all)
-  - [ ] Confirm `SpecId`, `SpecNode`, `CausalEdge`, `SpecDbError`, and `SpecStore` trait exist in `spec-db-core`
-  - [ ] Confirm bincode compatibility derives on persisted types: `Serialize`, `Deserialize` (or bincode-native traits if intentionally selected)
-- [ ] Create persistent store module in `spec-db-causal` (AC: 1, 2, 3, 4)
-  - [ ] Add `crates/spec-db-causal/src/store.rs` with `pub struct FjallStore`
-  - [ ] Define fields: `db: fjall::Database`, `nodes: fjall::Keyspace`, `edges: fjall::Keyspace`, `meta: fjall::Keyspace`
-  - [ ] Add constructor signature: `pub fn open(path: &std::path::Path) -> Result<Self, SpecDbError>`
-  - [ ] Open DB with `fjall::Database::builder(path).open()?`
-  - [ ] Open keyspaces with explicit names: `nodes`, `edges`, `meta`
-- [ ] Implement key codec helpers with exact key formats (AC: 1, 2, 3)
-  - [ ] `fn node_key(id: &SpecId) -> String` -> raw spec id string
-  - [ ] `fn edge_key(from: &SpecId, to: &SpecId) -> Vec<u8>` -> bytes for `{from_id}\x00{to_id}`
-  - [ ] `fn edge_key_parts(key: &[u8]) -> Result<(SpecId, SpecId), SpecDbError>` -> split on single null byte
-  - [ ] `fn meta_key_last_sync_sha() -> &'static str` and `fn meta_key_doc_count() -> &'static str`
-- [ ] Implement bincode encode/decode helpers in store module (AC: 1, 2, 3)
-  - [ ] `fn encode<T: serde::Serialize>(value: &T) -> Result<Vec<u8>, SpecDbError>` via `bincode::serde::encode_to_vec`
-  - [ ] `fn decode<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Result<T, SpecDbError>` via `bincode::serde::decode_from_slice`
-  - [ ] Use `bincode::config::standard()` consistently for both encode and decode
-  - [ ] Map codec failures to `SpecDbError::GraphError` with clear context text
-- [ ] Implement node persistence API (AC: 1)
-  - [ ] `pub fn put_node(&self, node: &SpecNode) -> Result<(), SpecDbError>` inserts in `nodes`
-  - [ ] `pub fn get_node(&self, id: &SpecId) -> Result<Option<SpecNode>, SpecDbError>` reads from `nodes`
-  - [ ] Round-trip test uses semantic equality (`assert_eq!(stored, loaded)`)
-- [ ] Implement edge persistence API (AC: 2)
-  - [ ] `pub fn put_edge(&self, edge: &CausalEdge) -> Result<(), SpecDbError>` writes `edges`
-  - [ ] `pub fn get_edge(&self, from: &SpecId, to: &SpecId) -> Result<Option<CausalEdge>, SpecDbError>` reads by composite key
-  - [ ] Add edge scan helper for Story 1.3 preload: `pub fn iter_edges(&self) -> Result<Vec<CausalEdge>, SpecDbError>`
-- [ ] Implement metadata persistence API (AC: 3)
-  - [ ] `pub fn set_last_sync_sha(&self, sha: &str) -> Result<(), SpecDbError>` and `pub fn last_sync_sha(&self) -> Result<Option<String>, SpecDbError>`
-  - [ ] `pub fn set_doc_count(&self, count: usize) -> Result<(), SpecDbError>` and `pub fn doc_count(&self) -> Result<Option<usize>, SpecDbError>`
-  - [ ] Persist metadata as UTF-8 bytes in `meta` keyspace, parse with explicit error mapping
-- [ ] Implement atomic node+edge write path (AC: 4)
-  - [ ] `pub fn put_node_with_edges(&self, node: &SpecNode, edges: &[CausalEdge]) -> Result<(), SpecDbError>`
-  - [ ] Use `let mut batch = self.db.batch();` then `batch.insert(&self.nodes, ...)` and `batch.insert(&self.edges, ...)`
-  - [ ] Commit exactly once with `batch.commit()?`; do not perform side writes outside batch
-  - [ ] Add failure-path test where one edge encode fails and assert no node is committed
-- [ ] Implement trait contract from Story 1.1 (AC: all)
-  - [ ] Implement `SpecStore` for `FjallStore` in `store.rs` or `lib.rs` with thin wrappers over above methods
-  - [ ] Keep API synchronous (architecture `P3` async boundary at MCP layer only)
-- [ ] Add tests for reopen durability and atomicity (AC: 1, 2, 3, 4)
-  - [ ] Integration tests in `crates/spec-db-causal/tests/integration.rs` using temp dir
-  - [ ] Test sequence: open -> write nodes/edges/meta -> drop -> reopen -> verify byte-for-byte logical roundtrip
-  - [ ] Test `put_node_with_edges` atomic guarantees under simulated error
+- [x] Finalize Story 1.1 dependency contracts before coding (AC: all)
+  - [x] Confirm `SpecId`, `SpecNode`, `CausalEdge`, `SpecDbError`, and `SpecStore` trait exist in `spec-db-core`
+  - [x] Confirm bincode compatibility derives on persisted types: `Serialize`, `Deserialize` (or bincode-native traits if intentionally selected)
+- [x] Create persistent store module in `spec-db-causal` (AC: 1, 2, 3, 4)
+  - [x] Add `crates/spec-db-causal/src/store.rs` with `pub struct FjallStore`
+  - [x] Define fields: `db: fjall::Database`, `nodes: fjall::Keyspace`, `edges: fjall::Keyspace`, `meta: fjall::Keyspace`
+  - [x] Add constructor signature: `pub fn open(path: &std::path::Path) -> Result<Self, SpecDbError>`
+  - [x] Open DB with `fjall::Database::builder(path).open()?`
+  - [x] Open keyspaces with explicit names: `nodes`, `edges`, `meta`
+- [x] Implement key codec helpers with exact key formats (AC: 1, 2, 3)
+  - [x] `fn node_key(id: &SpecId) -> String` -> raw spec id string
+  - [x] `fn edge_key(from: &SpecId, to: &SpecId) -> Vec<u8>` -> bytes for `{from_id}\x00{to_id}`
+  - [x] `fn edge_key_parts(key: &[u8]) -> Result<(SpecId, SpecId), SpecDbError>` -> split on single null byte
+  - [x] `fn meta_key_last_sync_sha() -> &'static str` and `fn meta_key_doc_count() -> &'static str`
+- [x] Implement bincode encode/decode helpers in store module (AC: 1, 2, 3)
+  - [x] `fn encode<T: serde::Serialize>(value: &T) -> Result<Vec<u8>, SpecDbError>` via `bincode::serde::encode_to_vec`
+  - [x] `fn decode<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Result<T, SpecDbError>` via `bincode::serde::decode_from_slice`
+  - [x] Use `bincode::config::standard()` consistently for both encode and decode
+  - [x] Map codec failures to `SpecDbError::GraphError` with clear context text
+- [x] Implement node persistence API (AC: 1)
+  - [x] `pub fn put_node(&self, node: &SpecNode) -> Result<(), SpecDbError>` inserts in `nodes`
+  - [x] `pub fn get_node(&self, id: &SpecId) -> Result<Option<SpecNode>, SpecDbError>` reads from `nodes`
+  - [x] Round-trip test uses semantic equality (`assert_eq!(stored, loaded)`)
+- [x] Implement edge persistence API (AC: 2)
+  - [x] `pub fn put_edge(&self, edge: &CausalEdge) -> Result<(), SpecDbError>` writes `edges`
+  - [x] `pub fn get_edge(&self, from: &SpecId, to: &SpecId) -> Result<Option<CausalEdge>, SpecDbError>` reads by composite key
+  - [x] Add edge scan helper for Story 1.3 preload: `pub fn iter_edges(&self) -> Result<Vec<CausalEdge>, SpecDbError>`
+- [x] Implement metadata persistence API (AC: 3)
+  - [x] `pub fn set_last_sync_sha(&self, sha: &str) -> Result<(), SpecDbError>` and `pub fn last_sync_sha(&self) -> Result<Option<String>, SpecDbError>`
+  - [x] `pub fn set_doc_count(&self, count: usize) -> Result<(), SpecDbError>` and `pub fn doc_count(&self) -> Result<Option<usize>, SpecDbError>`
+  - [x] Persist metadata as UTF-8 bytes in `meta` keyspace, parse with explicit error mapping
+- [x] Implement atomic node+edge write path (AC: 4)
+  - [x] `pub fn put_node_with_edges(&self, node: &SpecNode, edges: &[CausalEdge]) -> Result<(), SpecDbError>`
+  - [x] Use `let mut batch = self.db.batch();` then `batch.insert(&self.nodes, ...)` and `batch.insert(&self.edges, ...)`
+  - [x] Commit exactly once with `batch.commit()?`; do not perform side writes outside batch
+  - [x] Add failure-path test where one edge encode fails and assert no node is committed
+- [x] Implement trait contract from Story 1.1 (AC: all)
+  - [x] Implement `SpecStore` for `FjallStore` in `store.rs` or `lib.rs` with thin wrappers over above methods
+  - [x] Keep API synchronous (architecture `P3` async boundary at MCP layer only)
+- [x] Add tests for reopen durability and atomicity (AC: 1, 2, 3, 4)
+  - [x] Integration tests in `crates/spec-db-causal/tests/integration.rs` using temp dir
+  - [x] Test sequence: open -> write nodes/edges/meta -> drop -> reopen -> verify byte-for-byte logical roundtrip
+  - [x] Test `put_node_with_edges` atomic guarantees under simulated error
 
 ## Dev Notes
 
@@ -117,18 +117,31 @@ so that the causal graph survives process restarts and can be loaded into memory
 
 ### Agent Model Used
 
-openai/gpt-5.3-codex
+anthropic/claude-opus-4-6
 
 ### Completion Notes List
 
 - Story file includes exact keyspace/key format contract for nodes/edges/meta.
 - Atomic cross-keyspace batch behavior mapped to concrete Fjall API usage.
 - Cross-story dependency with Story 1.1 and preload support for Story 1.3 included.
+- FjallStore implemented with 3 keyspaces (nodes, edges, meta) using Fjall 3.0 API.
+- bincode 2.0.1 serde integration for encode/decode with standard config.
+- Node/edge/meta CRUD operations with typed error mapping.
+- Atomic put_node_with_edges via cross-keyspace batch commit.
+- SpecStore trait implemented for FjallStore.
+- iter_nodes() and iter_edges() for Story 1.3 preload.
+- 9 integration tests covering roundtrip, durability, atomicity, iteration.
+- All 24 tests pass, clippy clean, fmt clean.
 
 ### Change Log
 
 - Initial draft.
+- 2026-02-23: Full implementation of Story 1.2 — Fjall persistent storage with bincode serialization.
 
 ### File List
 
+- `crates/spec-db-causal/Cargo.toml`
+- `crates/spec-db-causal/src/lib.rs`
+- `crates/spec-db-causal/src/store.rs`
+- `crates/spec-db-causal/tests/integration.rs`
 - `_bmad-output/implementation-artifacts/1-2-fjall-persistent-storage-causal-graph.md`

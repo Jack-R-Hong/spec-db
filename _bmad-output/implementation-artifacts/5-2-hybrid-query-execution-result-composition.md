@@ -1,6 +1,6 @@
 # Story 5.2: Hybrid Query Execution & Result Composition
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -30,27 +30,27 @@ so that I always get the richest possible answer to my question.
 
 ## Tasks / Subtasks
 
-- [ ] Implement fan-out execution orchestration in `crates/router/src/lib.rs`.
-  - [ ] Add `fn query(&self, natural_language: &str) -> Result<ComposedQueryResult, SpecDbError>` on `QueryRouter<S: SearchEngine, C: CausalGraph>`.
-  - [ ] Route using `IntentClassifier::classify()` from Story 5.1 and dispatch execution paths: search-only, causal-only, hybrid.
-  - [ ] Ensure causal-only path bypasses Tantivy calls entirely.
-- [ ] Implement response composer in `crates/router/src/composer.rs`.
-  - [ ] Define `ComposedQueryResult` JSON-shape structs with explicit sections: `intent`, `search_results`, `causal_context`, `message`.
-  - [ ] Define per-hit enrichment structure (e.g., `ComposedHit { id, title, score, snippet, causal_edges }`) so search hits can embed causal edges.
-  - [ ] Implement `compose_hybrid(search_hits, causal_data)` to merge search results with causal context for each relevant hit.
-- [ ] Implement zero-result fallback behavior in `crates/router/src/composer.rs` and `crates/router/src/lib.rs`.
-  - [ ] When search returns empty for search/hybrid flows, derive related node candidates and invoke causal traversal.
-  - [ ] Return explicit message indicating no direct search matches while including causal context payload.
-  - [ ] If both search and causal are empty, return deterministic empty response with clear no-results message and no fabricated entries.
-- [ ] Align router output with MCP response contract expectations.
-  - [ ] Ensure composed response is JSON-serializable and consistent with architecture format patterns in preparation for `mcp::tools::query()` wiring.
-  - [ ] Preserve stable field names for downstream MCP clients and tests.
-- [ ] Add integration and edge-case tests in `crates/router/tests/integration.rs`.
-  - [ ] Hybrid path test: both engines non-empty -> composed results include search hits + causal edges.
-  - [ ] Search-zero fallback test: empty search -> causal fallback context included with explanatory message.
-  - [ ] Causal-only test: causal query executes graph path without search invocation.
-  - [ ] Both-empty test: clear empty response and no hallucinated data.
-  - [ ] Contract test: composed payload shape remains stable (`intent`, `search_results`, `causal_context`, `message`).
+- [x] Implement fan-out execution orchestration in `crates/router/src/lib.rs`.
+  - [x] Add `fn query(&self, natural_language: &str) -> Result<ComposedQueryResult, SpecDbError>` on `QueryRouter<S: SearchEngine, C: CausalGraph>`.
+  - [x] Route using `IntentClassifier::classify()` from Story 5.1 and dispatch execution paths: search-only, causal-only, hybrid.
+  - [x] Ensure causal-only path bypasses Tantivy calls entirely.
+- [x] Implement response composer in `crates/router/src/composer.rs`.
+  - [x] Define `ComposedQueryResult` JSON-shape structs with explicit sections: `intent`, `search_results`, `causal_context`, `message`.
+  - [x] Define per-hit enrichment structure (e.g., `ComposedHit { id, title, score, snippet, causal_edges }`) so search hits can embed causal edges.
+  - [x] Implement `compose_hybrid(search_hits, causal_data)` to merge search results with causal context for each relevant hit.
+- [x] Implement zero-result fallback behavior in `crates/router/src/composer.rs` and `crates/router/src/lib.rs`.
+  - [x] When search returns empty for search/hybrid flows, derive related node candidates and invoke causal traversal.
+  - [x] Return explicit message indicating no direct search matches while including causal context payload.
+  - [x] If both search and causal are empty, return deterministic empty response with clear no-results message and no fabricated entries.
+- [x] Align router output with MCP response contract expectations.
+  - [x] Ensure composed response is JSON-serializable and consistent with architecture format patterns in preparation for `mcp::tools::query()` wiring.
+  - [x] Preserve stable field names for downstream MCP clients and tests.
+- [x] Add integration and edge-case tests in `crates/router/tests/integration.rs`.
+  - [x] Hybrid path test: both engines non-empty -> composed results include search hits + causal edges.
+  - [x] Search-zero fallback test: empty search -> causal fallback context included with explanatory message.
+  - [x] Causal-only test: causal query executes graph path without search invocation.
+  - [x] Both-empty test: clear empty response and no hallucinated data.
+  - [x] Contract test: composed payload shape remains stable (`intent`, `search_results`, `causal_context`, `message`).
 
 ## Dev Notes
 
@@ -82,7 +82,7 @@ so that I always get the richest possible answer to my question.
 
 ### Agent Model Used
 
-openai/gpt-5.3-codex
+anthropic/claude-opus-4-6
 
 ### Completion Notes List
 

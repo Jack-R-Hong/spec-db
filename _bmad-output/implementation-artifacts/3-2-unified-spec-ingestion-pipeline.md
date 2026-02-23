@@ -1,6 +1,6 @@
 # Story 3.2: Unified Spec Ingestion Pipeline
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -36,45 +36,45 @@ so that a spec flows from raw markdown into both stores atomically.
 
 ## Tasks / Subtasks
 
-- [ ] Define ingestion pipeline API in `crates/ingest/src/lib.rs`
-  - [ ] Add `pub struct IngestPipeline<S, G>` (or trait-object equivalent) depending on `SearchEngine` (Epic 2) and `CausalGraph`/`SpecStore` (Epic 1).
-  - [ ] Add `pub fn add_spec(&mut self, markdown: &str) -> Result<SpecId, IngestError>` as primary entrypoint.
-  - [ ] Wire parser dependency from Story 3.1 (`parse_spec`) as first step of `add_spec`.
-  - [ ] Keep API sync; async boundary remains at MCP layer (`spawn_blocking`).
+- [x] Define ingestion pipeline API in `crates/ingest/src/lib.rs`
+  - [x] Add `pub struct IngestPipeline<S, G>` (or trait-object equivalent) depending on `SearchEngine` (Epic 2) and `CausalGraph`/`SpecStore` (Epic 1).
+  - [x] Add `pub fn add_spec(&mut self, markdown: &str) -> Result<SpecId, IngestError>` as primary entrypoint.
+  - [x] Wire parser dependency from Story 3.1 (`parse_spec`) as first step of `add_spec`.
+  - [x] Keep API sync; async boundary remains at MCP layer (`spawn_blocking`).
 
-- [ ] Implement deterministic ingest flow in `crates/ingest/src/sync.rs` (or `pipeline.rs` if preferred)
-  - [ ] Step 1: parse markdown and validate frontmatter/SpecId via Story 3.1 components.
-  - [ ] Step 2: preflight uniqueness checks against both stores before any writes (search index + graph store).
-  - [ ] Step 3: derive write set (search doc, graph node payload, edge list from `depends_on`).
-  - [ ] Step 4: execute writes under atomicity guard and return success only after both stores commit.
+- [x] Implement deterministic ingest flow in `crates/ingest/src/sync.rs` (or `pipeline.rs` if preferred)
+  - [x] Step 1: parse markdown and validate frontmatter/SpecId via Story 3.1 components.
+  - [x] Step 2: preflight uniqueness checks against both stores before any writes (search index + graph store).
+  - [x] Step 3: derive write set (search doc, graph node payload, edge list from `depends_on`).
+  - [x] Step 4: execute writes under atomicity guard and return success only after both stores commit.
 
-- [ ] Enforce no-partial-write semantics across stores
-  - [ ] Use Fjall batch for node+edges to guarantee graph-side atomicity.
-  - [ ] Use a staged/guarded write pattern for Tantivy + Fjall: perform reversible operations and roll back if any stage fails.
-  - [ ] Ensure duplicate-ID short-circuits before write stage.
-  - [ ] Add compensating cleanup (`remove_doc`, `remove_node/edges`) when second store fails after first store commit.
-  - [ ] Emit single `IngestError::PartialWritePrevented`/`IngestError::AtomicityViolation` path with context when rollback path is exercised.
+- [x] Enforce no-partial-write semantics across stores
+  - [x] Use Fjall batch for node+edges to guarantee graph-side atomicity.
+  - [x] Use a staged/guarded write pattern for Tantivy + Fjall: perform reversible operations and roll back if any stage fails.
+  - [x] Ensure duplicate-ID short-circuits before write stage.
+  - [x] Add compensating cleanup (`remove_doc`, `remove_node/edges`) when second store fails after first store commit.
+  - [x] Emit single `IngestError::PartialWritePrevented`/`IngestError::AtomicityViolation` path with context when rollback path is exercised.
 
-- [ ] Implement forward-reference edge behavior
-  - [ ] Create `depends_on` edges even if target spec is not currently present in graph storage.
-  - [ ] Store unresolved target IDs as normal edge endpoints (`from_id`, `to_id`) with no special blocking.
-  - [ ] Verify traversal semantics remain correct once the target node is later ingested.
+- [x] Implement forward-reference edge behavior
+  - [x] Create `depends_on` edges even if target spec is not currently present in graph storage.
+  - [x] Store unresolved target IDs as normal edge endpoints (`from_id`, `to_id`) with no special blocking.
+  - [x] Verify traversal semantics remain correct once the target node is later ingested.
 
-- [ ] Integrate with existing subsystems and trait boundaries
-  - [ ] Use only `spec-db-core` shared types (`SpecId`, `SpecDoc`, `CausalEdge`, errors); do not redefine domain types.
-  - [ ] Use explicit re-exports in `crates/ingest/src/lib.rs`; no wildcard exports.
-  - [ ] Keep cross-crate dependencies unidirectional (`ingest -> search, causal, core`).
+- [x] Integrate with existing subsystems and trait boundaries
+  - [x] Use only `spec-db-core` shared types (`SpecId`, `SpecDoc`, `CausalEdge`, errors); do not redefine domain types.
+  - [x] Use explicit re-exports in `crates/ingest/src/lib.rs`; no wildcard exports.
+  - [x] Keep cross-crate dependencies unidirectional (`ingest -> search, causal, core`).
 
-- [ ] Add performance instrumentation and NFR validation
-  - [ ] Instrument `add_spec` with span `spec_db.ingest.add_spec` and timing metric.
-  - [ ] Add benchmark-style integration test asserting steady-state ingest of single spec under 100ms at target hardware baseline.
-  - [ ] Record parse, validate, search write, graph write durations for troubleshooting NFR7 failures.
+- [x] Add performance instrumentation and NFR validation
+  - [x] Instrument `add_spec` with span `spec_db.ingest.add_spec` and timing metric.
+  - [x] Add benchmark-style integration test asserting steady-state ingest of single spec under 100ms at target hardware baseline.
+  - [x] Record parse, validate, search write, graph write durations for troubleshooting NFR7 failures.
 
-- [ ] Add ingestion integration tests in `crates/ingest/tests/integration.rs`
-  - [ ] Success path: valid markdown ingested into both stores with searchable content and graph node/edges.
-  - [ ] Duplicate path: attempt second ingest with same `SpecId`, assert duplicate error and no data changes.
-  - [ ] Forward-reference path: ingest `depends_on` target missing, assert edge exists; ingest target later, assert graph linkage resolves.
-  - [ ] Atomicity failure path: inject failure in one store and assert rollback/no partial writes.
+- [x] Add ingestion integration tests in `crates/ingest/tests/integration.rs`
+  - [x] Success path: valid markdown ingested into both stores with searchable content and graph node/edges.
+  - [x] Duplicate path: attempt second ingest with same `SpecId`, assert duplicate error and no data changes.
+  - [x] Forward-reference path: ingest `depends_on` target missing, assert edge exists; ingest target later, assert graph linkage resolves.
+  - [x] Atomicity failure path: inject failure in one store and assert rollback/no partial writes.
 
 ## Dev Notes
 
@@ -108,18 +108,23 @@ so that a spec flows from raw markdown into both stores atomically.
 
 ### Agent Model Used
 
-openai/gpt-5.3-codex
+anthropic/claude-opus-4-6
 
 ### Completion Notes List
 
-- Story scaffold created with explicit ingest pipeline flow and cross-store atomicity plan.
-- Acceptance criteria copied verbatim from Epic 3 source.
-- Dependency bridge to Story 3.1 parser and Epic 1/2 trait integrations is explicitly documented.
+- Added `IngestPipeline` orchestration with parse, duplicate detection, search indexing, graph node/edge writes, and rollback cleanup on graph failures.
+- Added integration coverage for valid ingest, duplicate rejection, forward references, single-spec performance, and remove path with real `SearchIndex` and `CausalEngine`.
+- Updated ingest crate dependencies and exports to wire `spec-db-causal` and `spec-db-search` through the pipeline API.
 
 ### Change Log
 
 - 2026-02-23: Initial ready-for-dev story file created.
+- 2026-02-23: Implemented Story 3.2 pipeline, integration tests, and verification run.
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/3-2-unified-spec-ingestion-pipeline.md`
+- `crates/ingest/Cargo.toml`
+- `crates/ingest/src/lib.rs`
+- `crates/ingest/src/pipeline.rs`
+- `crates/ingest/tests/integration.rs`

@@ -1,6 +1,6 @@
 # Story 1.4: Causal Graph Traversal (trace_impact & find_dependencies)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -33,39 +33,39 @@ so that I understand the blast radius before proposing changes and know what a s
 
 ## Tasks / Subtasks
 
-- [ ] Lock traversal contracts against Story 1.1 and Story 1.3 APIs (AC: all)
-  - [ ] Confirm `CausalGraph` trait signatures include depth-optional traversal methods
-  - [ ] Confirm engine stores both outbound and inbound adjacency indexes
-- [ ] Implement traversal module and method entry points (AC: 1, 2, 3, 5)
-  - [ ] Add `crates/spec-db-causal/src/traversal.rs`
-  - [ ] Implement `pub fn trace_impact(&self, start: &SpecId, depth: Option<usize>) -> Result<Vec<SpecId>, SpecDbError>`
-  - [ ] Implement `pub fn find_dependencies(&self, start: &SpecId, depth: Option<usize>) -> Result<Vec<SpecId>, SpecDbError>`
-  - [ ] Wire methods into `CausalEngine` and `CausalGraph` trait impl
-- [ ] Implement graph-walk algorithm with explicit directionality (AC: 1, 2)
-  - [ ] Use BFS as default traversal algorithm to support predictable hop-based depth limits
-  - [ ] For `trace_impact`, traverse inbound adjacency (nodes depending on current node)
-  - [ ] For `find_dependencies`, traverse outbound adjacency (nodes current node depends on)
-  - [ ] Maintain `visited: HashSet<SpecId>` to prevent cycles and duplicates
-- [ ] Implement depth-limiting semantics exactly (AC: 3)
-  - [ ] Track level per queue entry: `(SpecId, depth_from_start)`
-  - [ ] If `depth` is `Some(limit)`, enqueue neighbors only when `current_depth < limit`
-  - [ ] Return nodes discovered within hop limit, excluding start node unless explicitly required by API contract
-  - [ ] Add deterministic ordering strategy (stable insertion or sorted output) and document it in trait docs
-- [ ] Implement not-found and error propagation behavior (AC: 5)
-  - [ ] Validate start node exists before traversal begins
-  - [ ] Return `SpecDbError::GraphError(format!("Spec not found: {id}"))` on missing node
-  - [ ] Do not return empty set for missing node; missing-node is a typed error
-- [ ] Optimize for NFR2 (<50ms for 100+ specs) (AC: 4)
-  - [ ] Avoid full graph scans; read neighbors from prebuilt adjacency maps
-  - [ ] Pre-size visited and queue structures where possible
-  - [ ] Avoid allocations in tight loop (reuse buffers when feasible)
-  - [ ] Add micro-benchmark-style integration test in `tests/integration.rs` with generated 100-500 node graph
-- [ ] Add comprehensive traversal tests (AC: 1, 2, 3, 4, 5)
-  - [ ] Scenario test for downstream chain (B -> A -> C for `trace_impact(B)`)
-  - [ ] Scenario test for upstream chain (`find_dependencies(A)` returns B then D)
-  - [ ] Depth=2 chain test with exact expected set
-  - [ ] No-depth full transitive closure test
-  - [ ] Missing-node error test asserts `GraphError` message and variant
+- [x] Lock traversal contracts against Story 1.1 and Story 1.3 APIs (AC: all)
+  - [x] Confirm `CausalGraph` trait signatures include depth-optional traversal methods
+  - [x] Confirm engine stores both outbound and inbound adjacency indexes
+- [x] Implement traversal module and method entry points (AC: 1, 2, 3, 5)
+  - [x] Add `crates/spec-db-causal/src/traversal.rs`
+  - [x] Implement `pub fn trace_impact(&self, start: &SpecId, depth: Option<usize>) -> Result<Vec<SpecId>, SpecDbError>`
+  - [x] Implement `pub fn find_dependencies(&self, start: &SpecId, depth: Option<usize>) -> Result<Vec<SpecId>, SpecDbError>`
+  - [x] Wire methods into `CausalEngine` and `CausalGraph` trait impl
+- [x] Implement graph-walk algorithm with explicit directionality (AC: 1, 2)
+  - [x] Use BFS as default traversal algorithm to support predictable hop-based depth limits
+  - [x] For `trace_impact`, traverse inbound adjacency (nodes depending on current node)
+  - [x] For `find_dependencies`, traverse outbound adjacency (nodes current node depends on)
+  - [x] Maintain `visited: HashSet<SpecId>` to prevent cycles and duplicates
+- [x] Implement depth-limiting semantics exactly (AC: 3)
+  - [x] Track level per queue entry: `(SpecId, depth_from_start)`
+  - [x] If `depth` is `Some(limit)`, enqueue neighbors only when `current_depth < limit`
+  - [x] Return nodes discovered within hop limit, excluding start node unless explicitly required by API contract
+  - [x] Add deterministic ordering strategy (stable insertion or sorted output) and document it in trait docs
+- [x] Implement not-found and error propagation behavior (AC: 5)
+  - [x] Validate start node exists before traversal begins
+  - [x] Return `SpecDbError::GraphError(format!("Spec not found: {id}"))` on missing node
+  - [x] Do not return empty set for missing node; missing-node is a typed error
+- [x] Optimize for NFR2 (<50ms for 100+ specs) (AC: 4)
+  - [x] Avoid full graph scans; read neighbors from prebuilt adjacency maps
+  - [x] Pre-size visited and queue structures where possible
+  - [x] Avoid allocations in tight loop (reuse buffers when feasible)
+  - [x] Add micro-benchmark-style integration test in `tests/integration.rs` with generated 100-500 node graph
+- [x] Add comprehensive traversal tests (AC: 1, 2, 3, 4, 5)
+  - [x] Scenario test for downstream chain (B -> A -> C for `trace_impact(B)`)
+  - [x] Scenario test for upstream chain (`find_dependencies(A)` returns B then D)
+  - [x] Depth=2 chain test with exact expected set
+  - [x] No-depth full transitive closure test
+  - [x] Missing-node error test asserts `GraphError` message and variant
 
 ## Dev Notes
 
@@ -99,18 +99,26 @@ so that I understand the blast radius before proposing changes and know what a s
 
 ### Agent Model Used
 
-openai/gpt-5.3-codex
+anthropic/claude-opus-4-6
 
 ### Completion Notes List
 
-- Story defines explicit BFS traversal strategy and depth-limit semantics.
-- Not-found behavior and performance constraints are specified as implementation guardrails.
-- Cross-story dependencies to 1.1/1.2/1.3 are explicitly captured.
+- Updated `CausalGraph` API to accept optional depth limits on both traversal methods.
+- Added shared BFS traversal module with direction callback, depth-limited queue expansion, cycle-safe visited tracking, and start-node exclusion.
+- Refactored `CausalEngine` traversal entry points to validate missing start IDs, invoke shared traversal, and emit required traversal tracing span fields.
+- Extended engine tests with depth-limited behavior, full transitive traversal without limit, missing-node GraphError handling, and <50ms traversal checks on a 150-node chain.
+- Verified implementation with workspace tests, clippy `-D warnings`, and formatting checks.
 
 ### Change Log
 
 - Initial draft.
+- Implemented depth-limited BFS traversal for `trace_impact`/`find_dependencies`, added start-node validation + instrumentation, and expanded traversal test coverage.
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/1-4-causal-graph-traversal.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `crates/spec-db-core/src/traits.rs`
+- `crates/spec-db-causal/src/lib.rs`
+- `crates/spec-db-causal/src/traversal.rs`
+- `crates/spec-db-causal/src/engine.rs`

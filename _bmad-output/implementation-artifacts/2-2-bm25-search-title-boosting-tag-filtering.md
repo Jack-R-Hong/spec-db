@@ -1,6 +1,6 @@
 # Story 2.2: BM25 Search with Title Boosting, Tag Filtering & Spec Retrieval
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -38,46 +38,46 @@ So that I can quickly discover the most relevant specs for my task.
 
 ## Tasks / Subtasks
 
-- [ ] Implement query construction with BM25 defaults and title boosting (AC: 1, 2)
-  - [ ] In `crates/search/src/query.rs`, implement `pub fn build_text_query(index: &Index, fields: &SearchSchemaFields, q: &str) -> Result<Box<dyn Query>, SearchError>`.
-  - [ ] Use `QueryParser::for_index(index, vec![fields.title, fields.body])` and set title boost via `query_parser.set_field_boost(fields.title, TITLE_BOOST)`.
-  - [ ] Add `const TITLE_BOOST: f32 = 2.0` (tunable constant) and document rationale in code-level doc comment.
-  - [ ] Parse user text using `parse_query` and map parser failures to typed `SearchError`.
+- [x] Implement query construction with BM25 defaults and title boosting (AC: 1, 2)
+  - [x] In `crates/search/src/query.rs`, implement `pub fn build_text_query(index: &Index, fields: &SearchSchemaFields, q: &str) -> Result<Box<dyn Query>, SearchError>`.
+  - [x] Use `QueryParser::for_index(index, vec![fields.title, fields.body])` and set title boost via `query_parser.set_field_boost(fields.title, TITLE_BOOST)`.
+  - [x] Add `const TITLE_BOOST: f32 = 2.0` (tunable constant) and document rationale in code-level doc comment.
+  - [x] Parse user text using `parse_query` and map parser failures to typed `SearchError`.
 
-- [ ] Implement exact tag filtering as term-level constraint (AC: 3)
-  - [ ] Add `pub fn build_tag_filter_query(fields: &SearchSchemaFields, tag: &str) -> Box<dyn Query>` using `TermQuery::new(Term::from_field_text(fields.tags, tag), IndexRecordOption::Basic)`.
-  - [ ] Compose query + tag filter with `BooleanQuery::new(vec![(Occur::Must, text_query), (Occur::Must, tag_query)])`.
-  - [ ] Ensure filter behavior is exact string matching on STRING field (`tags`), not tokenized full-text behavior.
+- [x] Implement exact tag filtering as term-level constraint (AC: 3)
+  - [x] Add `pub fn build_tag_filter_query(fields: &SearchSchemaFields, tag: &str) -> Box<dyn Query>` using `TermQuery::new(Term::from_field_text(fields.tags, tag), IndexRecordOption::Basic)`.
+  - [x] Compose query + tag filter with `BooleanQuery::new(vec![(Occur::Must, text_query), (Occur::Must, tag_query)])`.
+  - [x] Ensure filter behavior is exact string matching on STRING field (`tags`), not tokenized full-text behavior.
 
-- [ ] Execute ranked retrieval and map to result DTO shape (AC: 1, 2, 6)
-  - [ ] In `crates/search/src/query.rs`, implement `pub fn search_specs_internal(&self, query: &str, tag: Option<&str>, limit: usize) -> Result<Vec<SearchHit>, SearchError>` on `SearchIndex`.
-  - [ ] Execute search with `searcher.search(&query, &TopDocs::with_limit(limit))` and preserve BM25 scores from collector tuples.
-  - [ ] Add search hit struct for downstream contract: `SearchHit { id, title, score, snippet }`.
-  - [ ] Build snippets via `SnippetGenerator::create(&searcher, &*query, fields.body)` and cap snippet length via `set_max_num_chars`.
-  - [ ] Return `Ok(vec![])` for no-match scenarios (no error).
+- [x] Execute ranked retrieval and map to result DTO shape (AC: 1, 2, 6)
+  - [x] In `crates/search/src/query.rs`, implement `pub fn search_specs_internal(&self, query: &str, tag: Option<&str>, limit: usize) -> Result<Vec<SearchHit>, SearchError>` on `SearchIndex`.
+  - [x] Execute search with `searcher.search(&query, &TopDocs::with_limit(limit))` and preserve BM25 scores from collector tuples.
+  - [x] Add search hit struct for downstream contract: `SearchHit { id, title, score, snippet }`.
+  - [x] Build snippets via `SnippetGenerator::create(&searcher, &*query, fields.body)` and cap snippet length via `set_max_num_chars`.
+  - [x] Return `Ok(vec![])` for no-match scenarios (no error).
 
-- [ ] Implement spec retrieval by exact ID lookup (AC: 4)
-  - [ ] In `crates/search/src/query.rs` or `indexer.rs`, implement `pub fn get_spec_internal(&self, id: &SpecId) -> Result<Option<SpecDoc>, SearchError>`.
-  - [ ] Use exact ID `TermQuery` over `id` field, limit to 1, and decode stored fields (`id`, `title`, `tags`, `meta`; body retrieval behavior must match core trait contract).
-  - [ ] Ensure `None` is returned for missing IDs and clear typed errors for decode/index failures.
+- [x] Implement spec retrieval by exact ID lookup (AC: 4)
+  - [x] In `crates/search/src/query.rs` or `indexer.rs`, implement `pub fn get_spec_internal(&self, id: &SpecId) -> Result<Option<SpecDoc>, SearchError>`.
+  - [x] Use exact ID `TermQuery` over `id` field, limit to 1, and decode stored fields (`id`, `title`, `tags`, `meta`; body retrieval behavior must match core trait contract).
+  - [x] Ensure `None` is returned for missing IDs and clear typed errors for decode/index failures.
 
-- [ ] Implement `SearchEngine` trait methods for search/retrieve (AC: 1, 3, 4, 6)
-  - [ ] In `crates/search/src/lib.rs`, wire trait method implementations to query-layer internals.
-  - [ ] Keep signatures and return types exactly aligned with `spec-db-core` trait definitions from Epic 1.
-  - [ ] Preserve cross-story dependency: this story reads the index created/committed by Story 2.1 implementation.
+- [x] Implement `SearchEngine` trait methods for search/retrieve (AC: 1, 3, 4, 6)
+  - [x] In `crates/search/src/lib.rs`, wire trait method implementations to query-layer internals.
+  - [x] Keep signatures and return types exactly aligned with `spec-db-core` trait definitions from Epic 1.
+  - [x] Preserve cross-story dependency: this story reads the index created/committed by Story 2.1 implementation.
 
-- [ ] Add performance and relevance integration tests (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Extend `crates/search/tests/integration.rs` with fixtures containing title-only and body-only keyword matches.
-  - [ ] Assert title match ranks above body-only match for same keyword.
-  - [ ] Assert tag filter returns only exact tag matches.
-  - [ ] Assert known ID lookup returns full stored document content.
-  - [ ] Add NFR test/benchmark case with >=100 synthetic specs and warm reader; assert query latency `< 10ms` for representative terms (record median/p95).
-  - [ ] Assert no-match query returns empty vector.
+- [x] Add performance and relevance integration tests (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Extend `crates/search/tests/integration.rs` with fixtures containing title-only and body-only keyword matches.
+  - [x] Assert title match ranks above body-only match for same keyword.
+  - [x] Assert tag filter returns only exact tag matches.
+  - [x] Assert known ID lookup returns full stored document content.
+  - [x] Add NFR test/benchmark case with >=100 synthetic specs and warm reader; assert query latency `< 10ms` for representative terms (record median/p95).
+  - [x] Assert no-match query returns empty vector.
 
-- [ ] Add observability + error propagation for production use (AC: 1, 5)
-  - [ ] Instrument spans `spec_db.search.query` and `spec_db.search.get_spec` with query length, limit, tag presence, and hit count.
-  - [ ] Map Tantivy/query parser/snippet errors to typed errors without panics.
-  - [ ] Ensure this crate remains synchronous; async wrapping stays at MCP handler (`spawn_blocking`) boundary.
+- [x] Add observability + error propagation for production use (AC: 1, 5)
+  - [x] Instrument spans `spec_db.search.query` and `spec_db.search.get_spec` with query length, limit, tag presence, and hit count.
+  - [x] Map Tantivy/query parser/snippet errors to typed errors without panics.
+  - [x] Ensure this crate remains synchronous; async wrapping stays at MCP handler (`spawn_blocking`) boundary.
 
 ## Dev Notes
 
@@ -151,18 +151,27 @@ So that I can quickly discover the most relevant specs for my task.
 
 ### Agent Model Used
 
-openai/gpt-5.3-codex
+anthropic/claude-opus-4-6
 
 ### Completion Notes List
 
-- Story authored with verbatim AC from Epic 2 and concrete implementation tasks tied to specific files/functions.
-- Tantivy 0.25 search APIs validated with current docs for BM25 ranking, field boost, boolean composition, and exact term filtering.
-- Story explicitly cross-references Story 2.1 index dependency and `spec-db-core` trait boundary.
+- Implemented `query.rs` BM25 text query builder with title field boosting, exact tag filters, Boolean query composition, ranked execution, and score-bearing `SearchHit` mapping.
+- Wired `SearchEngine` trait methods in `lib.rs` to real Tantivy query execution and added tracing spans `spec_db.search.query` plus `spec_db.search.get_spec` helper on `SearchIndex`.
+- Implemented exact ID retrieval with `get_spec_by_id` from stored fields (`id`, `title`, `tags`, `meta`) and explicit `body: ""` behavior because `body` is indexed TEXT but not STORED in schema.
+- Added integration coverage for title ranking precedence, exact tag filtering, empty result behavior, score presence, and 100+ doc latency guard.
+- Verification completed: `cargo test --workspace`, `cargo clippy --workspace -- -D warnings`, and `cargo fmt --all -- --check` all pass.
 
 ### Change Log
 
-- Created initial ready-for-dev story draft for Epic 2 Story 2.2.
+- Implemented Story 2.2 query layer and SearchEngine wiring in search crate.
+- Added Story 2.2 integration tests for ranking, filtering, score, no-match, and perf guardrail.
+- Updated story status/tasks and sprint status for review handoff.
 
 ### File List
 
+- `crates/search/src/query.rs`
+- `crates/search/src/lib.rs`
+- `crates/search/src/indexer.rs`
+- `crates/search/tests/integration.rs`
 - `_bmad-output/implementation-artifacts/2-2-bm25-search-title-boosting-tag-filtering.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`

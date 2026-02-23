@@ -1,0 +1,20 @@
+[package]
+name = "spec-db-ingest"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Spec parsing and ingestion for spec-db"
+
+[dependencies]
+spec-db-core = { workspace = true }
+spec-db-causal = { workspace = true }
+spec-db-search = { workspace = true }
+pulldown-cmark = { workspace = true }
+serde = { workspace = true }
+serde_yml = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+git2 = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

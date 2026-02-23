@@ -1,6 +1,6 @@
 # Story 1.1: Scaffold Workspace & Core Domain Types
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -24,43 +24,43 @@ so that all subsequent development has a consistent, version-locked foundation.
 
 ## Tasks / Subtasks
 
-- [ ] Initialize the lean workspace skeleton and crate manifests (AC: 1)
-- [ ] Create root `Cargo.toml` as both workspace root and binary package:
-  - [ ] Define `[package] name = "spec-db"`, edition `2024`, rust-version `1.85` (or higher enforced by CI), and root `src/main.rs`
-  - [ ] Define `[workspace] members = ["crates/spec-db-core", "crates/spec-db-causal"]`
-  - [ ] Define `[workspace.dependencies]` with explicit pins: `deep_causality = "=0.13.4"`, `fjall = "3.0"`, `thiserror = "2"`, `anyhow = "1"`, `serde = { version = "1", features = ["derive"] }`, `serde_yml = "0.0.12"`, `tracing = "0.1"`, `tokio = { version = "1.49", features = ["rt-multi-thread", "macros"] }`, `clap = { version = "4.5", features = ["derive"] }`, `git2 = "0.20.4"`, `pulldown-cmark = "0.13"`, `tantivy = "0.25.0"`, `rmcp = "=0.16.0"`, `bincode = { version = "=2.0.1", features = ["serde"] }`
-  - [ ] Add `[profile.release] lto = true`, `codegen-units = 1`, `strip = true`
-- [ ] Create crate manifests and wire dependencies to workspace pins (AC: 1, 8)
-  - [ ] `crates/spec-db-core/Cargo.toml`: package `spec-db-core`, deps on `serde`, `thiserror`
-  - [ ] `crates/spec-db-causal/Cargo.toml`: package `spec-db-causal`, deps on `spec-db-core`, `deep_causality`, `fjall`, `bincode`, `tracing`
-  - [ ] Root crate deps: `anyhow`, `clap`, `tokio`, `tracing` (minimum wiring for compile)
-- [ ] Implement core domain types in `spec-db-core` (AC: 2, 3)
-  - [ ] Create `crates/spec-db-core/src/types.rs` defining `SpecId`, `SpecDoc`, `SpecNode`, `CausalEdge`, `TrustLevel`
-  - [ ] Implement `impl SpecId { pub fn try_new(raw: impl Into<String>) -> Result<Self, SpecDbError> }`
-  - [ ] Add `impl AsRef<str> for SpecId`, `impl core::fmt::Display for SpecId`, `impl core::str::FromStr for SpecId`
-  - [ ] Validate with a compiled regex or equivalent parser enforcing `spec::{segment}::{segment}` where segment charset is `[a-z0-9-]+`
-- [ ] Implement trait interfaces in `spec-db-core` (AC: 4)
-  - [ ] Create `crates/spec-db-core/src/traits.rs` with public traits: `SearchEngine`, `CausalGraph`, `SpecStore`
-  - [ ] Keep trait signatures implementation-agnostic and return `Result<_, SpecDbError>`
-  - [ ] Include methods required by downstream stories: `trace_impact`, `find_dependencies`, node/edge persistence, metadata get/set
-- [ ] Implement error hierarchy in `spec-db-core` (AC: 5)
-  - [ ] Create `crates/spec-db-core/src/error.rs` with `#[derive(thiserror::Error, Debug)] pub enum SpecDbError`
-  - [ ] Add exactly these variants: `SearchError`, `GraphError`, `SyncError`, `IngestError`, `ConsistencyError`, `ConfigError`
-  - [ ] Ensure error strings are human-readable and include contextual payload (`String` or source error wrappers)
-- [ ] Expose explicit public API in crate root (AC: 2, 4, 5)
-  - [ ] Create `crates/spec-db-core/src/lib.rs` with `pub mod types; pub mod traits; pub mod error;`
-  - [ ] Add explicit re-exports only: `pub use types::{...};`, `pub use traits::{...};`, `pub use error::SpecDbError;`
-  - [ ] Do not use wildcard re-exports
-- [ ] Configure formatting and lint guardrails (AC: 9)
-  - [ ] Add `rustfmt.toml` with `edition = "2024"`, `max_width = 100`, `use_small_heuristics = "Max"`
-  - [ ] Add `clippy.toml` with project lint constraints (at minimum set `allow-unwrap-in-tests = true`, keep lib code unwrap-free)
-  - [ ] Ensure CI-equivalent local commands are documented in `README` or `CONTRIBUTING`
-- [ ] Add baseline tests for core invariants (AC: 3, 10, 11)
-  - [ ] Unit tests in `crates/spec-db-core/src/types.rs` for valid/invalid `SpecId`
-  - [ ] Unit tests for error construction and trait object usability
-  - [ ] Confirm `cargo build --workspace`, `cargo fmt --all -- --check`, and `cargo clippy --workspace -- -D warnings` pass
-- [ ] Capture handoff constraints for downstream stories (cross-story dependency)
-  - [ ] Add short note in `crates/spec-db-core/src/lib.rs` docs: Story 1.2 consumes `SpecNode`/`CausalEdge`; Story 1.3/1.4 consume `CausalGraph` trait contracts
+- [x] Initialize the lean workspace skeleton and crate manifests (AC: 1)
+- [x] Create root `Cargo.toml` as both workspace root and binary package:
+  - [x] Define `[package] name = "spec-db"`, edition `2024`, rust-version `1.85` (or higher enforced by CI), and root `src/main.rs`
+  - [x] Define `[workspace] members = ["crates/spec-db-core", "crates/spec-db-causal"]`
+  - [x] Define `[workspace.dependencies]` with explicit pins: `deep_causality = "=0.13.4"`, `fjall = "3.0"`, `thiserror = "2"`, `anyhow = "1"`, `serde = { version = "1", features = ["derive"] }`, `serde_yml = "0.0.12"`, `tracing = "0.1"`, `tokio = { version = "1.49", features = ["rt-multi-thread", "macros"] }`, `clap = { version = "4.5", features = ["derive"] }`, `git2 = "0.20.4"`, `pulldown-cmark = "0.13"`, `tantivy = "0.25.0"`, `rmcp = "=0.16.0"`, `bincode = { version = "=2.0.1", features = ["serde"] }`
+  - [x] Add `[profile.release] lto = true`, `codegen-units = 1`, `strip = true`
+- [x] Create crate manifests and wire dependencies to workspace pins (AC: 1, 8)
+  - [x] `crates/spec-db-core/Cargo.toml`: package `spec-db-core`, deps on `serde`, `thiserror`
+  - [x] `crates/spec-db-causal/Cargo.toml`: package `spec-db-causal`, deps on `spec-db-core`, `deep_causality`, `fjall`, `bincode`, `tracing`
+  - [x] Root crate deps: `anyhow`, `clap`, `tokio`, `tracing` (minimum wiring for compile)
+- [x] Implement core domain types in `spec-db-core` (AC: 2, 3)
+  - [x] Create `crates/spec-db-core/src/types.rs` defining `SpecId`, `SpecDoc`, `SpecNode`, `CausalEdge`, `TrustLevel`
+  - [x] Implement `impl SpecId { pub fn try_new(raw: impl Into<String>) -> Result<Self, SpecDbError> }`
+  - [x] Add `impl AsRef<str> for SpecId`, `impl core::fmt::Display for SpecId`, `impl core::str::FromStr for SpecId`
+  - [x] Validate with a compiled regex or equivalent parser enforcing `spec::{segment}::{segment}` where segment charset is `[a-z0-9-]+`
+- [x] Implement trait interfaces in `spec-db-core` (AC: 4)
+  - [x] Create `crates/spec-db-core/src/traits.rs` with public traits: `SearchEngine`, `CausalGraph`, `SpecStore`
+  - [x] Keep trait signatures implementation-agnostic and return `Result<_, SpecDbError>`
+  - [x] Include methods required by downstream stories: `trace_impact`, `find_dependencies`, node/edge persistence, metadata get/set
+- [x] Implement error hierarchy in `spec-db-core` (AC: 5)
+  - [x] Create `crates/spec-db-core/src/error.rs` with `#[derive(thiserror::Error, Debug)] pub enum SpecDbError`
+  - [x] Add exactly these variants: `SearchError`, `GraphError`, `SyncError`, `IngestError`, `ConsistencyError`, `ConfigError`
+  - [x] Ensure error strings are human-readable and include contextual payload (`String` or source error wrappers)
+- [x] Expose explicit public API in crate root (AC: 2, 4, 5)
+  - [x] Create `crates/spec-db-core/src/lib.rs` with `pub mod types; pub mod traits; pub mod error;`
+  - [x] Add explicit re-exports only: `pub use types::{...};`, `pub use traits::{...};`, `pub use error::SpecDbError;`
+  - [x] Do not use wildcard re-exports
+- [x] Configure formatting and lint guardrails (AC: 9)
+  - [x] Add `rustfmt.toml` with `edition = "2024"`, `max_width = 100`, `use_small_heuristics = "Max"`
+  - [x] Add `clippy.toml` with project lint constraints (at minimum set `allow-unwrap-in-tests = true`, keep lib code unwrap-free)
+  - [x] Ensure CI-equivalent local commands are documented in `README` or `CONTRIBUTING`
+- [x] Add baseline tests for core invariants (AC: 3, 10, 11)
+  - [x] Unit tests in `crates/spec-db-core/src/types.rs` for valid/invalid `SpecId`
+  - [x] Unit tests for error construction and trait object usability
+  - [x] Confirm `cargo build --workspace`, `cargo fmt --all -- --check`, and `cargo clippy --workspace -- -D warnings` pass
+- [x] Capture handoff constraints for downstream stories (cross-story dependency)
+  - [x] Add short note in `crates/spec-db-core/src/lib.rs` docs: Story 1.2 consumes `SpecNode`/`CausalEdge`; Story 1.3/1.4 consume `CausalGraph` trait contracts
 
 ## Dev Notes
 
@@ -99,18 +99,37 @@ so that all subsequent development has a consistent, version-locked foundation.
 
 ### Agent Model Used
 
-openai/gpt-5.3-codex
+anthropic/claude-opus-4-6
 
 ### Completion Notes List
 
 - Story file created with full AC coverage and implementation-ready guardrails.
 - Cross-story dependencies called out for Stories 1.2-1.4.
 - Version lock section includes current library gotchas from web research.
+- Workspace scaffolded with 3 crates (spec-db binary, spec-db-core lib, spec-db-causal lib).
+- All 5 domain types implemented: SpecId (with validation), SpecDoc, SpecNode, CausalEdge, TrustLevel. Added EdgeOrigin enum for edge provenance.
+- All 3 trait interfaces implemented: SearchEngine, CausalGraph, SpecStore with typed Result returns.
+- SpecDbError enum with 6 variants using thiserror derive.
+- SpecId validation uses manual parser (no regex dep) enforcing spec::{segment}::{segment} format.
+- 15 unit tests covering valid/invalid SpecId, TrustLevel clamping, error display.
+- cargo build, cargo test, cargo clippy -D warnings, cargo fmt --check all pass clean.
 
 ### Change Log
 
 - Initial draft.
+- 2026-02-23: Full implementation of Story 1.1 — workspace scaffold, domain types, traits, errors, tests.
 
 ### File List
 
+- `Cargo.toml`
+- `src/main.rs`
+- `rustfmt.toml`
+- `clippy.toml`
+- `crates/spec-db-core/Cargo.toml`
+- `crates/spec-db-core/src/lib.rs`
+- `crates/spec-db-core/src/types.rs`
+- `crates/spec-db-core/src/traits.rs`
+- `crates/spec-db-core/src/error.rs`
+- `crates/spec-db-causal/Cargo.toml`
+- `crates/spec-db-causal/src/lib.rs`
 - `_bmad-output/implementation-artifacts/1-1-scaffold-workspace-core-domain-types.md`

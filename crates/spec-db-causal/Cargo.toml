@@ -1,0 +1,17 @@
+[package]
+name = "spec-db-causal"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Causal graph engine backed by DeepCausality and Fjall for spec-db"
+
+[dependencies]
+spec-db-core = { workspace = true }
+deep_causality = { workspace = true }
+fjall = { workspace = true }
+bincode = { workspace = true }
+serde = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

@@ -12,39 +12,39 @@
 development_status:
   # Epic 1: Foundation & Causal Knowledge Graph
   epic-1: backlog
-  1-1-scaffold-workspace-core-domain-types: ready-for-dev
-  1-2-fjall-persistent-storage-causal-graph: ready-for-dev
-  1-3-deepcausality-in-memory-graph-engine: ready-for-dev
-  1-4-causal-graph-traversal: ready-for-dev
+  1-1-scaffold-workspace-core-domain-types: review
+  1-2-fjall-persistent-storage-causal-graph: review
+  1-3-deepcausality-in-memory-graph-engine: review
+  1-4-causal-graph-traversal: review
 
   # Epic 2: Spec Discovery & Search
   epic-2: backlog
-  2-1-tantivy-schema-definition-spec-indexing: ready-for-dev
-  2-2-bm25-search-title-boosting-tag-filtering: ready-for-dev
+  2-1-tantivy-schema-definition-spec-indexing: review
+  2-2-bm25-search-title-boosting-tag-filtering: review
 
   # Epic 3: Spec Authoring & Ingestion
   epic-3: backlog
-  3-1-spec-format-definition-markdown-yaml-parsing: ready-for-dev
-  3-2-unified-spec-ingestion-pipeline: ready-for-dev
+  3-1-spec-format-definition-markdown-yaml-parsing: review
+  3-2-unified-spec-ingestion-pipeline: review
 
   # Epic 4: Git-Centric Sync
   epic-4: backlog
-  4-1-full-rebuild-git-tree-walk: ready-for-dev
-  4-2-incremental-sync-git-diff: ready-for-dev
+  4-1-full-rebuild-git-tree-walk: review
+  4-2-incremental-sync-git-diff: review
 
   # Epic 5: Intelligent Query Routing
   epic-5: backlog
-  5-1-query-intent-classification: ready-for-dev
-  5-2-hybrid-query-execution-result-composition: ready-for-dev
+  5-1-query-intent-classification: review
+  5-2-hybrid-query-execution-result-composition: review
 
   # Epic 6: MCP Server & CLI
   epic-6: backlog
-  6-1-project-initialization-configuration: ready-for-dev
-  6-2-mcp-server-tools-stdio: ready-for-dev
-  6-3-mcp-resources-streamable-http: ready-for-dev
-  6-4-cli-administration-commands: ready-for-dev
+  6-1-project-initialization-configuration: review
+  6-2-mcp-server-tools-stdio: review
+  6-3-mcp-resources-streamable-http: review
+  6-4-cli-administration-commands: review
 
   # Epic 7: Data Integrity & Observability
   epic-7: backlog
-  7-1-cross-store-consistency-checks: ready-for-dev
-  7-2-opentelemetry-traces-metrics: ready-for-dev
+  7-1-cross-store-consistency-checks: review
+  7-2-opentelemetry-traces-metrics: review

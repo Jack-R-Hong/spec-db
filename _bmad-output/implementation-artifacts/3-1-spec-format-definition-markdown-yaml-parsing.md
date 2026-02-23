@@ -1,6 +1,6 @@
 # Story 3.1: Spec Format Definition & Markdown/YAML Parsing
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -46,41 +46,41 @@ created: 2026-03-15
 
 ## Tasks / Subtasks
 
-- [ ] Create ingest workspace crate (Build Order #4)
-  - [ ] Add `crates/ingest/Cargo.toml` with package name `spec-db-ingest`.
-  - [ ] Add `crates/ingest` to `[workspace.members]` in root `Cargo.toml`.
-  - [ ] Add workspace deps: `pulldown-cmark = "0.13.0"`, `serde`, `serde_yml`, `thiserror`, `tracing`.
-  - [ ] Add local deps on `spec-db-core` and traits needed for Story 3.2 integration.
+- [x] Create ingest workspace crate (Build Order #4)
+  - [x] Add `crates/ingest/Cargo.toml` with package name `spec-db-ingest`.
+  - [x] Add `crates/ingest` to `[workspace.members]` in root `Cargo.toml`.
+  - [x] Add workspace deps: `pulldown-cmark = "0.13.0"`, `serde`, `serde_yml`, `thiserror`, `tracing`.
+  - [x] Add local deps on `spec-db-core` and traits needed for Story 3.2 integration.
 
-- [ ] Implement parser API in `crates/ingest/src/parser.rs`
-  - [ ] Add `pub fn parse_spec(markdown: &str) -> Result<ParsedSpec, IngestError>`.
-  - [ ] Define `ParsedSpec { doc: SpecDoc, body_markdown: String }` (or equivalent) for downstream indexing.
-  - [ ] Parse markdown using `pulldown_cmark::Parser::new_ext` with `Options::ENABLE_YAML_STYLE_METADATA_BLOCKS`.
-  - [ ] Handle pulldown-cmark 0.13 event model (`Event::Start(Tag::MetadataBlock(_))` + `Event::End(TagEnd)`), not old `Event::End(Tag)` handling.
-  - [ ] Extract metadata block text only from frontmatter region and preserve remaining markdown body verbatim.
+- [x] Implement parser API in `crates/ingest/src/parser.rs`
+  - [x] Add `pub fn parse_spec(markdown: &str) -> Result<SpecDoc, SpecDbError>`.
+  - [x] Return parsed `SpecDoc` with frontmatter fields mapped and body markdown extracted.
+  - [x] Parse markdown using `pulldown_cmark::Parser::new_ext` with `Options::ENABLE_YAML_STYLE_METADATA_BLOCKS`.
+  - [x] Handle pulldown-cmark 0.13 event model (`Event::Start(Tag::MetadataBlock(_))` + `Event::End(TagEnd)`), not old `Event::End(Tag)` handling.
+  - [x] Extract metadata block text only from frontmatter region and preserve remaining markdown body verbatim.
 
-- [ ] Implement YAML decoding in `crates/ingest/src/parser.rs`
-  - [ ] Define frontmatter DTO (`RawFrontmatter`) with serde derives for fields: `id`, `title`, `version`, `tags`, `depends_on`, `owner`, `created`.
-  - [ ] Deserialize with `serde_yml::from_str::<RawFrontmatter>(&frontmatter)`.
-  - [ ] Convert DTO into `spec_db_core::SpecDoc` and normalize optionals (`tags`, `depends_on`, `owner`).
-  - [ ] Preserve unknown YAML fields into `SpecDoc.meta` (if present in core type) instead of dropping them.
+- [x] Implement YAML decoding in `crates/ingest/src/parser.rs`
+  - [x] Define frontmatter DTO (`RawFrontmatter`) with serde derives for fields: `id`, `title`, `version`, `tags`, `depends_on`, `owner`, `created`.
+  - [x] Deserialize with `serde_yml::from_str::<RawFrontmatter>(&frontmatter)`.
+  - [x] Convert DTO into `spec_db_core::SpecDoc` and normalize optionals (`tags`, `depends_on`, `owner`).
+  - [x] Keep field mapping aligned to current `SpecDoc` schema (no `meta` field exists in core type).
 
-- [ ] Implement validation in `crates/ingest/src/validate.rs`
-  - [ ] Add `pub fn validate_frontmatter(raw: &RawFrontmatter) -> Result<(), IngestError>` for required field checks.
-  - [ ] Add `pub fn validate_spec_id(id: &str) -> Result<SpecId, IngestError>` that enforces `spec::{segment}::{segment}`.
-  - [ ] Enforce lowercase alphanumeric+hyphen segments and reject empty segments.
-  - [ ] Return explicit missing-field errors (`MissingField("id")`, `MissingField("title")`) and invalid-id errors with actionable text.
+- [x] Implement validation in `crates/ingest/src/validate.rs`
+  - [x] Add `pub fn validate_frontmatter(raw: &RawFrontmatter) -> Result<(), IngestError>` for required field checks.
+  - [x] Add `pub fn validate_spec_id(id: &str) -> Result<SpecId, IngestError>` that enforces `spec::{segment}::{segment}`.
+  - [x] Enforce lowercase alphanumeric+hyphen segments and reject empty segments.
+  - [x] Return explicit missing-field errors (`MissingField("id")`, `MissingField("title")`) and invalid-id errors with actionable text.
 
-- [ ] Wire crate exports and error flow in `crates/ingest/src/lib.rs`
-  - [ ] Re-export parser entry points needed by Story 3.2 pipeline.
-  - [ ] Ensure all library errors are typed (`thiserror`) and no `unwrap`/`expect` in non-test code.
-  - [ ] Add tracing spans for parser and validator public APIs (`spec_db.ingest.parse`, `spec_db.ingest.validate`).
+- [x] Wire crate exports and error flow in `crates/ingest/src/lib.rs`
+  - [x] Re-export parser entry points needed by Story 3.2 pipeline.
+  - [x] Ensure all library errors are typed (`thiserror`) and no `unwrap`/`expect` in non-test code.
+  - [x] Add tracing spans for parser and validator public APIs (`spec_db.ingest.parse`, `spec_db.ingest.validate`).
 
-- [ ] Add parser test coverage in `crates/ingest/tests/`
-  - [ ] Add fixtures: `fixtures/valid_spec.md`, `fixtures/invalid_id.md`, `fixtures/missing_fields.md`, `fixtures/multi_depends.md`.
-  - [ ] Add integration tests for success mapping to `SpecDoc` and clean body extraction.
-  - [ ] Add failure tests for missing frontmatter, invalid id format, and missing required fields.
-  - [ ] Add test asserting multi-value `depends_on` maps exactly to `Vec<SpecId-like strings>` in parsed document.
+- [x] Add parser test coverage in `crates/ingest/tests/`
+  - [x] Add fixtures: `fixtures/valid_spec.md`, `fixtures/invalid_id.md`, `fixtures/missing_fields.md`, `fixtures/multi_depends.md`.
+  - [x] Add integration tests for success mapping to `SpecDoc` and clean body extraction.
+  - [x] Add failure tests for missing frontmatter, invalid id format, and missing required fields.
+  - [x] Add test asserting multi-value `depends_on` maps exactly to `Vec<SpecId-like strings>` in parsed document.
 
 ## Dev Notes
 
@@ -115,18 +115,31 @@ created: 2026-03-15
 
 ### Agent Model Used
 
-openai/gpt-5.3-codex
+anthropic/claude-opus-4-6
 
 ### Completion Notes List
 
-- Story scaffold created with concrete implementation plan for parser + validator + tests.
-- Acceptance criteria copied verbatim from Epic 3 source.
-- Explicit migration guidance included for `serde_yml` usage and pulldown-cmark 0.13 event handling.
+- Created new `spec-db-ingest` crate and wired workspace membership/dependency path updates.
+- Implemented markdown+YAML frontmatter parsing with pulldown-cmark 0.13 metadata events and `serde_yml` decoding.
+- Added frontmatter/spec-id validation and conversion into `SpecDoc` with optional field normalization.
+- Added fixture-backed integration tests for success/failure paths and body extraction behavior.
+- Verified with `cargo test --workspace`, `cargo clippy --workspace -- -D warnings`, and `cargo fmt --all -- --check`.
 
 ### Change Log
 
 - 2026-02-23: Initial ready-for-dev story file created.
+- 2026-02-23: Implemented Story 3.1 ingest crate, parser/validator, fixtures, tests, and workspace wiring.
 
 ### File List
 
+- `Cargo.toml`
+- `crates/ingest/Cargo.toml`
+- `crates/ingest/src/lib.rs`
+- `crates/ingest/src/parser.rs`
+- `crates/ingest/src/validate.rs`
+- `crates/ingest/tests/integration.rs`
+- `crates/ingest/tests/fixtures/valid_spec.md`
+- `crates/ingest/tests/fixtures/invalid_id.md`
+- `crates/ingest/tests/fixtures/missing_fields.md`
+- `crates/ingest/tests/fixtures/multi_depends.md`
 - `_bmad-output/implementation-artifacts/3-1-spec-format-definition-markdown-yaml-parsing.md`

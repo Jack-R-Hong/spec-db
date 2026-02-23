@@ -1,0 +1,16 @@
+pub const SPAN_SEARCH_QUERY: &str = "spec_db.search.query";
+pub const SPAN_SEARCH_ADD_DOC: &str = "spec_db.search.add_doc";
+pub const SPAN_SEARCH_REMOVE_DOC: &str = "spec_db.search.remove_doc";
+pub const SPAN_SEARCH_COMMIT: &str = "spec_db.search.commit";
+pub const SPAN_GRAPH_LOAD: &str = "spec_db.graph.load";
+pub const SPAN_GRAPH_TRAVERSE: &str = "spec_db.graph.traverse";
+pub const SPAN_INGEST_ADD_SPEC: &str = "spec_db.ingest.add_spec";
+pub const SPAN_INGEST_PARSE: &str = "spec_db.ingest.parse";
+pub const SPAN_SYNC_FULL_REBUILD: &str = "spec_db.sync.full_rebuild";
+pub const SPAN_SYNC_INCREMENTAL: &str = "spec_db.sync.incremental";
+pub const SPAN_SYNC_TREE_WALK: &str = "spec_db.sync.tree_walk";
+pub const SPAN_SYNC_ATOMIC_SWAP: &str = "spec_db.sync.atomic_swap";
+pub const SPAN_CONSISTENCY_CHECK: &str = "spec_db.consistency.check";
+pub const SPAN_ROUTER_QUERY: &str = "spec_db.router.query";
+pub const SPAN_ROUTER_CLASSIFY: &str = "spec_db.router.classify";
+pub const SPAN_MCP_TOOL_CALL: &str = "spec_db.mcp.tool_call";

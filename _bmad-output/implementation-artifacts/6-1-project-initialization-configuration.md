@@ -1,6 +1,6 @@
 # Story 6.1: Project Initialization & Configuration
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -28,29 +28,29 @@ so that I can start writing specs immediately without manual setup.
 
 ## Tasks / Subtasks
 
-- [ ] Define CLI shape for init command in `src/main.rs`
-  - [ ] Add `Commands::Init` to clap enum and wire to `run_init()`
-  - [ ] Keep command help text aligned with FR33 and config-first startup
-- [ ] Implement initialization service in `src/main.rs` (or `src/init.rs` if extracted)
-  - [ ] Create `fn run_init(cwd: &Path) -> anyhow::Result<()>`
-  - [ ] Ensure directories exist: `specs/`, `.spec-db/`, `data/tantivy/`, `data/fjall/`
-  - [ ] Guard existing `.spec-db/config.yaml` and return warning without overwrite
-- [ ] Generate scaffold spec files in `specs/example/`
-  - [ ] Write `hello-world.md` with required frontmatter fields (`id`, `title`, `version`, `created`)
-  - [ ] Write `getting-started.md` with `depends_on` and `tags` examples
-  - [ ] Validate scaffold IDs use `spec::{segment}::{segment}` form
-- [ ] Implement config schema + loader using `serde_yml`
-  - [ ] Add `SpecDbConfig` and nested transport structs in `crates/core/src/types.rs` or config module
-  - [ ] Add `impl Default for SpecDbConfig` with sensible defaults (`specs/`, `data/`, stdio enabled, HTTP optional)
-  - [ ] Add `fn load_config(path: &Path) -> Result<SpecDbConfig, SpecDbError>` in root startup path
-  - [ ] Emit `ConfigError` for missing required fields and malformed YAML
-- [ ] Emit clear init UX
-  - [ ] Print created paths and next-step commands (`spec-db sync`, `spec-db serve`, `spec-db status`)
-  - [ ] Print non-destructive warning when config exists
-- [ ] Add tests
-  - [ ] Unit test defaults + merge semantics for optional fields
-  - [ ] Integration test `spec-db init` in empty temp dir
-  - [ ] Integration test `spec-db init` idempotency when config already exists
+- [x] Define CLI shape for init command in `src/main.rs`
+  - [x] Add `Commands::Init` to clap enum and wire to `run_init()`
+  - [x] Keep command help text aligned with FR33 and config-first startup
+- [x] Implement initialization service in `src/main.rs` (or `src/init.rs` if extracted)
+  - [x] Create `fn run_init(cwd: &Path) -> anyhow::Result<()>`
+  - [x] Ensure directories exist: `specs/`, `.spec-db/`, `data/tantivy/`, `data/fjall/`
+  - [x] Guard existing `.spec-db/config.yaml` and return warning without overwrite
+- [x] Generate scaffold spec files in `specs/example/`
+  - [x] Write `hello-world.md` with required frontmatter fields (`id`, `title`, `version`, `created`)
+  - [x] Write `getting-started.md` with `depends_on` and `tags` examples
+  - [x] Validate scaffold IDs use `spec::{segment}::{segment}` form
+- [x] Implement config schema + loader using `serde_yml`
+  - [x] Add `SpecDbConfig` and nested transport structs in `crates/core/src/types.rs` or config module
+  - [x] Add `impl Default for SpecDbConfig` with sensible defaults (`specs/`, `data/`, stdio enabled, HTTP optional)
+  - [x] Add `fn load_config(path: &Path) -> Result<SpecDbConfig, SpecDbError>` in root startup path
+  - [x] Emit `ConfigError` for missing required fields and malformed YAML
+- [x] Emit clear init UX
+  - [x] Print created paths and next-step commands (`spec-db sync`, `spec-db serve`, `spec-db status`)
+  - [x] Print non-destructive warning when config exists
+- [x] Add tests
+  - [x] Unit test defaults + merge semantics for optional fields
+  - [x] Integration test `spec-db init` in empty temp dir
+  - [x] Integration test `spec-db init` idempotency when config already exists
 
 ## Dev Notes
 
@@ -78,16 +78,25 @@ so that I can start writing specs immediately without manual setup.
 
 ### Agent Model Used
 
-openai/gpt-5.3-codex
+anthropic/claude-opus-4-6
 
 ### Completion Notes List
 
-- Story drafted with concrete file-level tasks for `spec-db init`, scaffold generation, config parsing, and idempotent behavior.
+- Added `spec-db init` CLI scaffolding with idempotent config guard and printed next-step guidance.
+- Added `SpecDbConfig` YAML schema/loader with defaults and tests for defaults, partial YAML merge, and missing file errors.
+- Added root integration tests that validate project structure creation and idempotent re-run behavior.
+- Verified `cargo fmt --all -- --check`, `cargo test --workspace`, and `cargo clippy --workspace -- -D warnings` all pass.
 
 ### Change Log
 
-- Created initial ready-for-dev story document.
+- Implemented Story 6.1 in code and updated artifact status to review.
 
 ### File List
 
 - _bmad-output/implementation-artifacts/6-1-project-initialization-configuration.md
+- Cargo.toml
+- crates/spec-db-core/Cargo.toml
+- crates/spec-db-core/src/config.rs
+- crates/spec-db-core/src/lib.rs
+- src/main.rs
+- tests/integration.rs
