@@ -103,7 +103,117 @@ Add to your MCP client (e.g. Claude Desktop `claude_desktop_config.json`):
 }
 ```
 
-## Requirements
+## Getting Started (Development)
 
-- Rust 1.85+
-- Git (specs are synced from local git history)
+### Prerequisites
+
+- [Rust 1.85+](https://rustup.rs/)
+- Git
+- [Node.js 20+](https://nodejs.org/) (for web UI only)
+- [Buck2](https://buck2.build/) (optional, alternative build system)
+
+### Build from Source
+
+```bash
+# Clone
+git clone <repo-url> && cd spec-db
+
+# Build (debug)
+cargo build
+
+# Build (release)
+cargo build --release
+
+# Install locally
+cargo install --path .
+```
+
+### Run Tests
+
+```bash
+# All tests (unit + integration)
+cargo test
+
+# Integration / acceptance tests only
+cargo test --test '*'
+
+# Single test file
+cargo test --test acceptance_story_1_1
+```
+
+### Development Workflow
+
+```bash
+# 1. Create a test project somewhere
+mkdir /tmp/my-specs && cd /tmp/my-specs && git init
+
+# 2. Initialize lattice project
+lattice init
+
+# 3. Commit the scaffolded specs (lattice syncs from git)
+git add -A && git commit -m "init"
+
+# 4. Build index and causal graph
+lattice sync
+
+# 5. Start MCP server (stdio)
+lattice serve
+
+# 6. Check project status
+lattice status
+```
+
+### Web UI
+
+The web UI is a SvelteKit app embedded into the binary at build time.
+
+```bash
+cd web-ui
+npm install
+npm run dev       # Dev server with HMR
+npm run build     # Production build (output: web-ui/dist/)
+npm run check     # Type-check
+```
+
+Enable the web UI in `.lattice/config.yaml`:
+
+```yaml
+web:
+  enabled: true
+  host: 127.0.0.1
+  port: 8080
+```
+
+Then `lattice serve` will start both the MCP stdio server and the web UI.
+
+### Build with Buck2 (Alternative)
+
+```bash
+# Build the binary
+buck2 build //:lattice
+
+# Run directly
+buck2 run //:lattice -- serve
+```
+
+Third-party dependencies are managed via [reindeer](https://github.com/facebookincubator/reindeer). After updating `Cargo.toml`:
+
+```bash
+reindeer buckify
+```
+
+### Project Structure
+
+```
+src/              Main binary (CLI entry point)
+crates/
+  core/           Config, spec model, shared types
+  causal/         Causal graph (DeepCausality + Fjall)
+  search/         Full-text search (Tantivy)
+  ingest/         Git sync, markdown parsing
+  router/         Query routing logic
+  mcp/            MCP server + tool handlers
+  web/            Web UI server (Axum + embedded SvelteKit)
+web-ui/           SvelteKit frontend source
+tests/            Integration / acceptance tests
+```
