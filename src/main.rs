@@ -131,6 +131,21 @@ fn run_init(cwd: &Path) -> anyhow::Result<()> {
     std::fs::write(cwd.join("specs/example/hello-world.md"), HELLO_WORLD_SPEC)?;
     std::fs::write(cwd.join("specs/example/getting-started.md"), GETTING_STARTED_SPEC)?;
 
+    let gitignore_path = cwd.join(".gitignore");
+    let needs_entry = if gitignore_path.exists() {
+        let content = std::fs::read_to_string(&gitignore_path)?;
+        !content.lines().any(|line| line.trim() == "data/" || line.trim() == "data")
+    } else {
+        true
+    };
+    if needs_entry {
+        use std::io::Write;
+        let mut f = std::fs::OpenOptions::new().create(true).append(true).open(&gitignore_path)?;
+        writeln!(f)?;
+        writeln!(f, "# Lattice runtime data (indexes, databases)")?;
+        writeln!(f, "data/")?;
+    }
+
     println!("Initialized lattice project:");
     println!("  specs/example/hello-world.md");
     println!("  specs/example/getting-started.md");

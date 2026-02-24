@@ -1,0 +1,16 @@
+specs_dir: specs
+data_dir: data
+transport:
+  stdio: true
+  http: null
+telemetry:
+  enabled: false
+  endpoint: null
+  protocol: grpc
+ai:
+  default_trust: 0.5
+web:
+  enabled: true
+  host: '127.0.0.1'
+  port: 3000
+  auth_token: null

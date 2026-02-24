@@ -2,6 +2,70 @@ use std::path::Path;
 
 use spec_db_core::{CausalEdge, SpecDbError, SpecId, SpecNode, SpecStore};
 
+/// Identify the process holding a flock on `lock_path` by scanning `/proc/locks`.
+///
+/// Returns `(pid, command_line)` when the holder is found.
+#[cfg(target_os = "linux")]
+fn find_lock_holder(lock_path: &Path) -> Option<(u32, String)> {
+    use std::os::unix::fs::MetadataExt;
+
+    let meta = std::fs::metadata(lock_path).ok()?;
+    let dev = meta.dev();
+    let ino = meta.ino();
+
+    // Extract major/minor matching the kernel's %02x:%02x format in /proc/locks.
+    let target_major = ((dev >> 8) & 0xfff) | ((dev >> 32) & !0xfff);
+    let target_minor = (dev & 0xff) | ((dev >> 12) & !0xff);
+
+    let contents = std::fs::read_to_string("/proc/locks").ok()?;
+    for line in contents.lines() {
+        // "1: FLOCK  ADVISORY  WRITE 12345 fd:00:4194827 0 EOF"
+        let fields: Vec<&str> = line.split_whitespace().collect();
+        if fields.len() < 8 {
+            continue;
+        }
+
+        let dev_ino: Vec<&str> = fields[5].split(':').collect();
+        if dev_ino.len() != 3 {
+            continue;
+        }
+
+        let major = match u64::from_str_radix(dev_ino[0], 16) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+        let minor = match u64::from_str_radix(dev_ino[1], 16) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+        let file_ino: u64 = match dev_ino[2].parse() {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+
+        if major == target_major && minor == target_minor && file_ino == ino {
+            let pid: u32 = match fields[4].parse() {
+                Ok(p) => p,
+                Err(_) => continue,
+            };
+
+            let cmd = std::fs::read_to_string(format!("/proc/{pid}/cmdline"))
+                .unwrap_or_default()
+                .replace('\0', " ");
+            let cmd = cmd.trim();
+            let cmd = if cmd.is_empty() { "unknown" } else { cmd };
+            return Some((pid, cmd.to_owned()));
+        }
+    }
+
+    None
+}
+
+#[cfg(not(target_os = "linux"))]
+fn find_lock_holder(_lock_path: &Path) -> Option<(u32, String)> {
+    None
+}
+
 pub struct FjallStore {
     db: fjall::Database,
     nodes: fjall::Keyspace,
@@ -55,7 +119,25 @@ fn map_fjall_err(e: fjall::Error) -> SpecDbError {
 
 impl FjallStore {
     pub fn open(path: &Path) -> Result<Self, SpecDbError> {
-        let db = fjall::Database::builder(path).open().map_err(map_fjall_err)?;
+        let db = fjall::Database::builder(path).open().map_err(|e| {
+            if matches!(e, fjall::Error::Locked) {
+                let lock_path = path.join("lock");
+                match find_lock_holder(&lock_path) {
+                    Some((pid, cmd)) => SpecDbError::GraphError(format!(
+                        "database is locked by PID {pid} ({cmd}). \
+                         Stop that process or, if it crashed, remove: {}",
+                        lock_path.display()
+                    )),
+                    None => SpecDbError::GraphError(format!(
+                        "database is locked (holder not found — likely stale). \
+                         Remove the lock file and retry: rm {}",
+                        lock_path.display()
+                    )),
+                }
+            } else {
+                map_fjall_err(e)
+            }
+        })?;
         let nodes =
             db.keyspace("nodes", fjall::KeyspaceCreateOptions::default).map_err(map_fjall_err)?;
         let edges =
