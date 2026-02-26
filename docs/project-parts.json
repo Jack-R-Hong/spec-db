@@ -1,0 +1,96 @@
+{
+  "repository_type": "monorepo",
+  "generated": "2026-02-27",
+  "parts": [
+    {
+      "part_id": "backend",
+      "display_name": "Rust Backend",
+      "project_type": "backend",
+      "root_path": "/",
+      "technology": {
+        "language": "Rust",
+        "edition": "2024",
+        "msrv": "1.85",
+        "framework": "Tokio + Axum + rmcp",
+        "key_dependencies": [
+          "tantivy 0.25.0",
+          "fjall 3.0",
+          "deep_causality 0.13.4",
+          "rmcp 0.16.0",
+          "axum 0.8"
+        ]
+      },
+      "entry_points": [
+        "src/main.rs",
+        "crates/mcp/src/lib.rs",
+        "crates/web/src/lib.rs"
+      ],
+      "critical_directories": [
+        "src/",
+        "crates/core/",
+        "crates/search/",
+        "crates/causal/",
+        "crates/ingest/",
+        "crates/router/",
+        "crates/mcp/",
+        "crates/web/"
+      ],
+      "documentation": [
+        "docs/architecture-backend.md",
+        "docs/development-guide-backend.md"
+      ]
+    },
+    {
+      "part_id": "web-ui",
+      "display_name": "Svelte Web UI",
+      "project_type": "web",
+      "root_path": "/web-ui",
+      "technology": {
+        "language": "TypeScript",
+        "framework": "SvelteKit 2.x",
+        "ui_library": "Svelte 5.x",
+        "build_tool": "Vite 6.x",
+        "key_dependencies": [
+          "@xyflow/svelte 1.x",
+          "@dagrejs/dagre 1.1",
+          "snarkdown 2.x"
+        ]
+      },
+      "entry_points": [
+        "web-ui/src/routes/+page.svelte",
+        "web-ui/src/routes/+layout.svelte"
+      ],
+      "critical_directories": [
+        "web-ui/src/routes/",
+        "web-ui/src/lib/"
+      ],
+      "documentation": [
+        "docs/architecture-web-ui.md",
+        "docs/development-guide-web-ui.md"
+      ]
+    }
+  ],
+  "integration_points": [
+    {
+      "from": "web-ui",
+      "to": "backend",
+      "type": "REST API",
+      "protocol": "HTTP/JSON",
+      "endpoints": [
+        "/api/search",
+        "/api/spec/:id",
+        "/api/graph/overview",
+        "/api/graph/node/:id",
+        "/api/impact/:id",
+        "/api/dependencies/:id"
+      ]
+    },
+    {
+      "from": "backend",
+      "to": "web-ui",
+      "type": "Build Embedding",
+      "protocol": "rust-embed",
+      "description": "Web UI dist/ folder embedded into binary at compile time"
+    }
+  ]
+}
